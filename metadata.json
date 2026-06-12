@@ -1,0 +1,6 @@
+{
+  "name": "Achievers Slot",
+  "description": "A modern, premium, and user-friendly college event management platform supporting multiple campuses, events, stalls, live updates, and an AI assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
