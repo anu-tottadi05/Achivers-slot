@@ -40,6 +40,7 @@ export interface StallFeedback {
   rating: number;
   review: string;
   timestamp: string;
+  photoUrl?: string;
 }
 
 export interface Stall {
@@ -55,6 +56,7 @@ export interface Stall {
   favorites: string[]; // List of userNames or userIds who favorited it
   priceRange?: string;
   timing?: string;
+  menu?: { name: string; price: number }[];
 }
 
 export interface LiveAnnouncement {

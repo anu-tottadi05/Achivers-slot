@@ -49,6 +49,83 @@ export default function App() {
   const [selectedCity, setSelectedCity] = useState('All');
   const [selectedDate, setSelectedDate] = useState('');
 
+  // 1. AI Event Recommender Domain selection
+  const [recommenderDomain, setRecommenderDomain] = useState<'Coding' | 'Robotics' | 'Design' | 'Arts' | 'Business'>('Coding');
+
+  // 2. Campus Avatar State (Sync with Local Storage if available)
+  const [studentProfile, setStudentProfile] = useState(() => {
+    return {
+      name: 'Anusha Tottadi',
+      branch: 'Computer Science & Engineering',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+      title: 'Academy Innovator'
+    };
+  });
+
+  // 3. Instagram-style Live Event Stories
+  const [activeStory, setActiveStory] = useState<{ id: string; campus: string; title: string; image: string; description: string; tag: string } | null>(null);
+  const [storyIndex, setStoryIndex] = useState(0);
+
+  // 4. Notifications System Live Engine
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<{ id: string; type: 'info' | 'warning' | 'alert' | 'success'; text: string; timestamp: string; isRead: boolean; eventId?: string; actionLabel?: string }[]>([
+    {
+      id: 'notif-1',
+      type: 'info',
+      text: '🤖 National AI & Cloud Workshop starting in 10 minutes at KITE Seminar Hall B! Setup your workstations and connect to KITE-STUDENTS-WIFI.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+      isRead: false,
+      eventId: 'ai-wave-kite',
+      actionLabel: 'Teleport Venue'
+    },
+    {
+      id: 'notif-2',
+      type: 'warning',
+      text: '⚠️ Shifting coordinates! Next-Gen UI/UX Design Workshop has been relocated from Lab Auditorium Room 2 to Vance Design Center Room 3 for better cooling.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+      isRead: false,
+      eventId: 'ui-ux-vitp',
+      actionLabel: 'Locate Venue'
+    },
+    {
+      id: 'notif-3',
+      type: 'alert',
+      text: '⏳ Registration gatepass allocations closing within 3 hours for MECHANO-HACK 2.0 at VIT Pune. Secure your entry receipt immediately.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+      isRead: false,
+      eventId: 'mechano-vitp',
+      actionLabel: 'Register Direct'
+    },
+    {
+      id: 'notif-4',
+      type: 'success',
+      text: '🎁 Pulp Fiction Fresh Juices Offer: Students get flat ₹30 discount on Pineapple mocktails & sweet lime pulps inside OAT food strip!',
+      timestamp: new Date(Date.now() - 1000 * 120 * 5).toISOString(),
+      isRead: false,
+      actionLabel: 'Go To Stalls'
+    }
+  ]);
+
+  // 5. Smart Campus Map directions
+  const [mapTargetType, setMapTargetType] = useState<'venue' | 'stall'>('venue');
+  const [mapTargetId, setMapTargetId] = useState<string>('ai-wave-kite');
+  const [isShowingMapPath, setIsShowingMapPath] = useState(false);
+
+  // 6. Food Feedback Photo preset or simulation
+  const [reviewPhotoPreset, setReviewPhotoPreset] = useState<string>('');
+  
+  // 7. Digital Certificate download target
+  const [activeCertificateReg, setActiveCertificateReg] = useState<Registration | null>(null);
+
+  // 8. QR Code details popup modal
+  const [activeQrModal, setActiveQrModal] = useState<{ type: 'ticket' | 'stall-order'; id: string; title: string, subtitle?: string } | null>(null);
+  const [selectedOrderStall, setSelectedOrderStall] = useState<any | null>(null);
+  const [orderQuantity, setOrderQuantity] = useState<number>(1);
+  const [selectedMenuIndex, setSelectedMenuIndex] = useState<number>(0);
+
+  // 9. Dashboard Mode Switch: Coordinator board vs Admin Analytics
+  const [dashboardMode, setDashboardMode] = useState<'broadcast' | 'analytics'>('broadcast');
+
   // Selected event for direct relocation / detailed view
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(EVENTS[0]);
 
@@ -93,7 +170,12 @@ export default function App() {
         likes: 35,
         favorites: [],
         priceRange: '₹40 - ₹80',
-        timing: '11:00 AM - 8:30 PM'
+        timing: '11:00 AM - 8:30 PM',
+        menu: [
+          { name: 'Spicy Mint Pani Puri (6 pieces)', price: 40 },
+          { name: 'Sweet Tamarind Dahi Puri (6 pieces)', price: 60 },
+          { name: 'Baked Cheese Double-Mast Puri', price: 80 }
+        ]
       });
 
       // 2. Noodles Stall
@@ -112,8 +194,13 @@ export default function App() {
         ],
         likes: 42,
         favorites: [],
-        priceRange: '₹80 - ₹150',
-        timing: '12:00 PM - 9:00 PM'
+        priceRange: '₹80 - ₹120',
+        timing: '12:00 PM - 9:00 PM',
+        menu: [
+          { name: 'Schezwan Veg Stir Noodles', price: 90 },
+          { name: 'Fiery Garlic Paneer Noodles', price: 120 },
+          { name: 'Hot Chili Crispy Spring Roll (2 pieces)', price: 70 }
+        ]
       });
 
       // 3. Juice Stall
@@ -132,8 +219,13 @@ export default function App() {
         ],
         likes: 28,
         favorites: [],
-        priceRange: '₹50 - ₹100',
-        timing: '09:30 AM - 8:00 PM'
+        priceRange: '₹30 - ₹60',
+        timing: '09:30 AM - 8:00 PM',
+        menu: [
+          { name: 'Cold Pressed Orange Pulp Juice', price: 60 },
+          { name: 'Tangy Sweet Lime Chill Pulp', price: 50 },
+          { name: 'Fresh Mint Limeade Cooler', price: 30 }
+        ]
       });
 
       // 4. Ice Cream Stall
@@ -152,8 +244,13 @@ export default function App() {
         ],
         likes: 49,
         favorites: [],
-        priceRange: '₹60 - ₹140',
-        timing: '01:00 PM - 10:00 PM'
+        priceRange: '₹80 - ₹135',
+        timing: '01:00 PM - 10:00 PM',
+        menu: [
+          { name: 'Fudge Brownie Loaded Sundae', price: 130 },
+          { name: 'Crisp Butterscotch Waffle Cone', price: 90 },
+          { name: 'Fresh Mango Cream Slush Scoop', price: 80 }
+        ]
       });
 
       // 5. Books Stall
@@ -172,8 +269,13 @@ export default function App() {
         ],
         likes: 31,
         favorites: [],
-        priceRange: '₹120 - ₹400',
-        timing: '09:00 AM - 07:00 PM'
+        priceRange: '₹120 - ₹299',
+        timing: '09:00 AM - 07:00 PM',
+        menu: [
+          { name: 'Core Engineering Reference Notes', price: 299 },
+          { name: 'Science Fiction Paperback Novel', price: 199 },
+          { name: 'Custom Spiral Aesthetic Journal', price: 120 }
+        ]
       });
 
       // 6. T-shirt Stall
@@ -192,8 +294,13 @@ export default function App() {
         ],
         likes: 38,
         favorites: [],
-        priceRange: '₹250 - ₹550',
-        timing: '10:00 AM - 09:00 PM'
+        priceRange: '₹199 - ₹550',
+        timing: '10:00 AM - 09:00 PM',
+        menu: [
+          { name: 'Department Pride Graphic T-Shirt', price: 350 },
+          { name: 'Premium Oversized Developer Hoodie', price: 550 },
+          { name: 'Signature Adjustable Campus Cap', price: 199 }
+        ]
       });
 
       // 7. Badges/keychains Stall
@@ -212,8 +319,13 @@ export default function App() {
         ],
         likes: 27,
         favorites: [],
-        priceRange: '₹20 - ₹99',
-        timing: '10:00 AM - 08:30 PM'
+        priceRange: '₹40 - ₹85',
+        timing: '10:00 AM - 08:30 PM',
+        menu: [
+          { name: 'Glazed Holographic Laptop Sticker Sheets', price: 40 },
+          { name: 'Custom Laser Etched Wooden Keychain', price: 85 },
+          { name: 'Aesthetic Lapel Metallic Logo Pin', price: 60 }
+        ]
       });
     });
 
@@ -299,6 +411,79 @@ export default function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiHistory, isAiOpen]);
+
+  // 10-Features: Food photo attachment presets
+  const STALL_SNAP_PRESETS = [
+    { name: 'Crunchy Dish', url: 'https://images.unsplash.com/photo-1628294895518-8ded30338669?auto=format&fit=crop&w=300&q=80' },
+    { name: 'Royal Puris', url: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?auto=format&fit=crop&w=300&q=80' },
+    { name: 'Spiced Noodles', url: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=300&q=80' },
+    { name: 'Fresh Mint Cooler', url: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=300&q=80' },
+    { name: 'Geeky Badges', url: 'https://images.unsplash.com/photo-1572244111382-74d42a8b3b70?auto=format&fit=crop&w=300&q=80' },
+    { name: 'Aesthetic Novel', url: 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=300&q=80' }
+  ];
+
+  // Dynamic Avatar Profile Level and XP Progress Calculator
+  const getAvatarXPAndLevel = () => {
+    // Count user feedbacks where the userName matches the student profile name
+    let reviewCount = 0;
+    stalls.forEach(st => {
+      st.feedbacks.forEach(fb => {
+        if (fb.userName.toLowerCase() === studentProfile.name.toLowerCase()) {
+          reviewCount++;
+        }
+      });
+    });
+
+    const xpFromRegistrations = registrations.length * 150;
+    const xpFromLikes = favoriteStalls.length * 40;
+    const xpFromReviews = reviewCount * 80;
+    const totalXP = 120 + xpFromRegistrations + xpFromLikes + xpFromReviews;
+
+    const level = Math.floor(totalXP / 300) + 1;
+    const levelXPProgress = totalXP % 300;
+    const xpNeededForNext = 300;
+
+    const badges = [
+      { id: 'b-welcome', name: 'Verified Achiever', desc: 'Active verified student on the Achievers Slot platform.', icon: '🛡️', unlocked: true },
+      { id: 'b-ticket', name: 'Pass Collector', desc: 'Secure at least 1 digital event gate pass.', icon: '🎟️', unlocked: registrations.length >= 1 },
+      { id: 'b-review', name: 'Cuisine Critic', desc: 'Review at least 1 food or product stall.', icon: '🍔', unlocked: reviewCount >= 1 },
+      { id: 'b-like', name: 'Vendor Supporter', desc: 'Show love by liking at least 1 local kiosk.', icon: '❤️', unlocked: favoriteStalls.length >= 1 },
+      { id: 'b-pioneer', name: 'Campus Legend', desc: 'Reach Level 3 or earn 450+ points on campus.', icon: '👑', unlocked: totalXP >= 450 }
+    ];
+
+    return {
+      totalXP,
+      level,
+      levelXPProgress,
+      xpNeededForNext,
+      reviewCount,
+      badges
+    };
+  };
+
+  // Notification click routing handler
+  const handleNotificationAction = (notif: typeof notifications[0]) => {
+    // Mark as read
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+    setIsNotificationsOpen(false);
+
+    if (notif.eventId) {
+      const matchEvent = EVENTS.find(e => e.id === notif.eventId);
+      if (matchEvent) {
+        handleSelectEventDirectly(matchEvent);
+        
+        // Auto pre-set map to synchronize route
+        setMapTargetType('venue');
+        setMapTargetId(notif.eventId);
+        setIsShowingMapPath(true);
+        triggerToast(`📍 Switched venue guide map to focus: ${matchEvent.name}`);
+      }
+    } else {
+      // General stalls redirect
+      setActiveTab('stalls');
+      triggerToast(`🛍️ Redirecting straight to Food & Swag stall court!`);
+    }
+  };
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -400,6 +585,9 @@ export default function App() {
       return st;
     });
     setStalls(updated);
+    if (!favoriteStalls.includes(stallId)) {
+      setFavoriteStalls([...favoriteStalls, stallId]);
+    }
     triggerToast("❤️ Liked! Thank you for supporting our creative stalls.");
   };
 
@@ -413,7 +601,7 @@ export default function App() {
     }
   };
 
-  // Feedback Submission for Stall
+  // Feedback Submission for Stall with optional Photo Feedback attachment
   const submitStallFeedback = (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackStallId) return;
@@ -422,13 +610,17 @@ export default function App() {
       return;
     }
 
-    const newFeedback = {
+    const newFeedback: { id: string; userName: string; rating: number; review: string; timestamp: string; photoUrl?: string } = {
       id: Math.random().toString(),
       userName: studentNameInput,
       rating: feedbackRating,
       review: feedbackReview,
       timestamp: new Date().toISOString()
     };
+
+    if (reviewPhotoPreset) {
+      newFeedback.photoUrl = reviewPhotoPreset;
+    }
 
     const updatedStalls = stalls.map(st => {
       if (st.id === feedbackStallId) {
@@ -441,13 +633,14 @@ export default function App() {
     });
 
     setStalls(updatedStalls);
-    triggerToast("✨ Review submitted in real-time! This helps stall owners refine menu items & games.");
+    triggerToast("✨ Review with snap submitted in real-time! Your contribution earned you +80 XP points.");
     
     // Reset states
     setFeedbackStallId(null);
     setFeedbackReview('');
     setStudentNameInput('');
     setFeedbackRating(5);
+    setReviewPhotoPreset('');
   };
 
   // Chat with Server Proxy Gemini Endpoint
@@ -630,6 +823,8 @@ export default function App() {
         }} 
         activeSection={activeTab} 
         registrationCount={registrations.length} 
+        unreadNotificationsCount={notifications.filter(n => !n.isRead).length}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
       />
 
       {/* Core Body Container */}
@@ -664,6 +859,142 @@ export default function App() {
                 <div className="flex items-center space-x-4">
                   <span>Current Date: <strong>June 2026</strong></span>
                   <span className="hidden md:inline">🛡️ Student Safety Certified</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Instagram-style Live Event Stories */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+              <div className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span className="text-xs uppercase font-mono tracking-wider text-zinc-900 font-bold flex items-center">
+                      Live Campus Stories
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-zinc-400 font-mono">Click to view snapshot</span>
+                </div>
+                
+                <div className="flex items-center space-x-5 overflow-x-auto pb-1 scrollbar-none">
+                  {[
+                    { id: 'st-ai', campus: 'KITE', title: 'AI Workshop', image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=600&q=80', description: 'Students setting up Gemini API developer tools on their workpads! Cloud web app is fully deployed. 🚀', tag: 'AI & Cloud' },
+                    { id: 'st-ui', campus: 'VIT Pune', title: 'UI/UX Master', image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=600&q=80', description: 'Interactive feedback sessions: reviewing layout grids and typography on student prototypes with design mentors!', tag: 'Dynamic UI' },
+                    { id: 'st-rob', campus: 'VIIT', title: 'RoboKombat', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=600&q=80', description: 'Teams running diagnostic voltage runs on high torque motors. The metal battle-ground looks ready! 🤖', tag: 'Robotics' },
+                    { id: 'st-web3', campus: 'Apex', title: 'Web3 Contract', image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=600&q=80', description: 'Smart Contracts compiling on local Ganache test chains. Gas limits fully optimized for on-chain state persistence.', tag: 'Web3 Minting' },
+                    { id: 'st-puris', campus: 'VIIT', title: 'Pani Puri', image: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?auto=format&fit=crop&w=600&q=80', description: 'Fresh hot batches prepped at Royal Pani Puri Junction! Handheld mint containers filled with spicy mineral lime water.', tag: 'Food Arena' }
+                  ].map((story, idx, arr) => (
+                    <button
+                      key={story.id}
+                      onClick={() => {
+                        setActiveStory(story);
+                        setStoryIndex(idx);
+                      }}
+                      className="flex flex-col items-center space-y-1.5 group focus:outline-none flex-shrink-0 active:scale-95 transition-transform"
+                    >
+                      <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-500 to-zinc-950 group-hover:rotate-6 transition-all duration-300">
+                        <div className="p-1 bg-white rounded-full">
+                          <img
+                            src={story.image}
+                            alt={story.title}
+                            referrerPolicy="no-referrer"
+                            className="w-14 h-14 rounded-full object-cover grayscale-[15%] group-hover:grayscale-0 transition-all border border-zinc-100"
+                          />
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 bg-zinc-950 text-white font-mono text-[8px] px-1.5 py-0.5 rounded-full scale-90 border border-white/20">
+                          {story.campus}
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-zinc-800 tracking-tight group-hover:text-emerald-700 transition-colors">
+                        {story.title}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 1. AI Event Recommender Matchmaker Dashboard */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+              <div className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-emerald-950 rounded-2xl border border-zinc-850 p-6 text-white relative overflow-hidden shadow-xl">
+                <div className="absolute top-0 right-0 transform translate-x-12 -translate-y-12 w-64 h-64 bg-emerald-700/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 transform -translate-x-12 translate-y-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-4 max-w-xl">
+                    <div className="flex items-center space-x-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-2.5 py-1 rounded-full text-xs font-mono font-semibold max-w-max">
+                      <Sparkles className="w-3.5 h-3.5 animate-bounce mr-1" />
+                      <span>COGNITIVE AI TARGET COMPANION</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-extrabold tracking-tight text-white mb-1">AI Event Recommender</h3>
+                      <p className="text-zinc-300 text-xs leading-relaxed">
+                        Instant cognitive matchmaking! Select your interests below and the intelligence engine will cross-reference your career preferences with on-ground campus slot directories.
+                      </p>
+                    </div>
+                    
+                    {/* Interest selector tags */}
+                    <div className="flex flex-wrap gap-2">
+                      {(['Coding', 'Robotics', 'Design', 'Arts', 'Business'] as const).map((dm) => (
+                        <button
+                          key={dm}
+                          onClick={() => {
+                            setRecommenderDomain(dm);
+                            triggerToast(`💡 Matchmaker filtered events targeting: ${dm}`);
+                          }}
+                          className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                            recommenderDomain === dm
+                              ? 'bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                              : 'bg-zinc-900/80 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white'
+                          }`}
+                        >
+                          {dm === 'Coding' && '⌨️ Software & Coding'}
+                          {dm === 'Robotics' && '🤖 Robotics & IoT'}
+                          {dm === 'Design' && '🎨 Dynamic UI/UX'}
+                          {dm === 'Arts' && '🎭 Culturals & Arts'}
+                          {dm === 'Business' && '📈 Startups & Management'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recommendations container */}
+                  <div className="w-full md:max-w-md bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 space-y-3 backdrop-blur-sm flex flex-col justify-center">
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Match Recommendations list:</span>
+                    
+                    <div className="space-y-2">
+                      {EVENTS.filter(ev => {
+                        if (recommenderDomain === 'Coding') return ev.category === 'Workshops' || ev.id.includes('wave') || ev.id.includes('hack') || ev.id.includes('web3');
+                        if (recommenderDomain === 'Robotics') return ev.id.includes('mechano') || ev.id.includes('robo') || ev.category === 'Technical Competitions';
+                        if (recommenderDomain === 'Design') return ev.id.includes('ui-ux') || ev.id.includes('ppt') || ev.category === 'Workshops';
+                        if (recommenderDomain === 'Arts') return ev.category === 'Cultural & Sports' || ev.id.includes('wave') || ev.id.includes('cricket');
+                        return ev.category === 'Seminars & Keynotes' || ev.id.includes('web3') || ev.id.includes('expo');
+                      }).slice(0, 2).map((recEv) => {
+                        const recCampus = CAMPUSES.find(c => c.id === recEv.campusId)?.shortName || 'Campus';
+                        return (
+                          <div 
+                            key={recEv.id}
+                            onClick={() => handleSelectEventDirectly(recEv)}
+                            className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800/85 transition-all cursor-pointer group border border-zinc-850 bg-zinc-950/40"
+                          >
+                            <div className="flex items-center space-x-2.5 min-w-0">
+                              <img 
+                                src={recEv.posterUrl} 
+                                alt={recEv.name} 
+                                referrerPolicy="no-referrer"
+                                className="w-9 h-9 rounded object-cover border border-zinc-800 flex-shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-semibold text-zinc-200 group-hover:text-emerald-400 transition-colors truncate">{recEv.name}</h4>
+                                <span className="text-[9px] text-zinc-400 font-mono block truncate">{recCampus} • {recEv.time}</span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] text-emerald-400 font-mono font-medium flex-shrink-0 group-hover:translate-x-1 transition-transform pl-1">Match →</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1089,19 +1420,127 @@ export default function App() {
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
-              {/* Left: Announcements list */}
+              {/* Left: Announcements list or Admin Analytics */}
               <div className="lg:col-span-8 space-y-6">
-                <div>
-                  <div className="inline-flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full font-mono mb-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Real-time Syncing Active</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-150 pb-5">
+                  <div>
+                    <div className="inline-flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full font-mono mb-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>Real-time Syncing Active</span>
+                    </div>
+                    <h2 className="text-3xl font-black text-zinc-950 tracking-tight">
+                      {dashboardMode === 'broadcast' ? 'Live Broadcast Updates' : 'Admin Command Analytics'}
+                    </h2>
+                    <p className="text-xs text-zinc-500 font-mono mt-0.5">
+                      {dashboardMode === 'broadcast' 
+                        ? 'Stay updated with live changes, timing alignments, and coordinator announcements.'
+                        : 'Visual performance metrics regarding overall student registration densities, likes, and feedback streams.'}
+                    </p>
                   </div>
-                  <h2 className="text-3xl font-black text-zinc-950 tracking-tight">Live Broadcast Updates</h2>
-                  <p className="text-xs text-zinc-500 font-mono mt-0.5">Stay updated with instant changes, timing alignments, cancelled slots, and coordinators&apos; declarations.</p>
+
+                  {/* Mode Toggler */}
+                  <div className="flex items-center space-x-1.5 bg-zinc-100 p-1 rounded-xl self-start sm:self-center border border-zinc-250/30">
+                    <button
+                      onClick={() => setDashboardMode('broadcast')}
+                      className={`text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all ${
+                        dashboardMode === 'broadcast'
+                          ? 'bg-zinc-950 text-white shadow-sm'
+                          : 'text-zinc-600 hover:text-zinc-800'
+                      }`}
+                    >
+                      📢 Broadcast Feed
+                    </button>
+                    <button
+                      onClick={() => setDashboardMode('analytics')}
+                      className={`text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all ${
+                        dashboardMode === 'analytics'
+                          ? 'bg-zinc-950 text-white shadow-sm'
+                          : 'text-zinc-600 hover:text-zinc-800'
+                      }`}
+                    >
+                      📊 Admin Analytics
+                    </button>
+                  </div>
                 </div>
 
-                {/* Displaying Live Lists */}
-                <div className="space-y-4">
+                {dashboardMode === 'analytics' ? (
+                  /* 10. Admin Dashboard Analytics View */
+                  <div className="bg-white border border-zinc-250 p-6 rounded-3xl shadow-sm space-y-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="p-4 bg-zinc-50 border border-zinc-150 rounded-2xl">
+                        <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Total Entries Registered</span>
+                        <p className="text-2xl font-black text-zinc-950 mt-1">{registrations.length + 12}</p>
+                        <span className="text-[9px] text-emerald-600 font-medium">✨ Live Sync (You: {registrations.length})</span>
+                      </div>
+
+                      <div className="p-4 bg-zinc-50 border border-zinc-150 rounded-2xl">
+                        <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Total Food Likes</span>
+                        <p className="text-2xl font-black text-zinc-950 mt-1">
+                          {stalls.reduce((acc, st) => acc + st.likes, 0)}
+                        </p>
+                        <span className="text-[9px] text-zinc-400 font-mono">Across all campus booths</span>
+                      </div>
+
+                      <div className="p-4 bg-zinc-50 border border-zinc-150 rounded-2xl">
+                        <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Kite Student Engagement</span>
+                        <p className="text-2xl font-black text-zinc-950 mt-1">94.8%</p>
+                        <span className="text-[9px] text-emerald-600 font-medium">🔥 Active campus of the day</span>
+                      </div>
+
+                      <div className="p-4 bg-zinc-50 border border-zinc-150 rounded-2xl">
+                        <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">User Reviews</span>
+                        <p className="text-2xl font-black text-zinc-950 mt-1">
+                          {stalls.reduce((acc, st) => acc + st.feedbacks.length, 0)}
+                        </p>
+                        <span className="text-[9px] text-zinc-400 font-mono">Feedback loops collected</span>
+                      </div>
+                    </div>
+
+                    {/* Visual indicators styled using Tailwind progress bars */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="border border-zinc-150 p-4 rounded-2xl space-y-3.5">
+                        <span className="text-xs uppercase font-mono text-zinc-500 font-bold block">Popular Events Category</span>
+                        <div className="space-y-2.5">
+                          {[
+                            { category: 'Workshops', count: 85, color: 'bg-emerald-600' },
+                            { category: 'Hackathons', count: 72, color: 'bg-teal-600' },
+                            { category: 'Technical Competitions', count: 48, color: 'bg-zinc-800' },
+                            { category: 'Cultural & Sports', count: 95, color: 'bg-zinc-950' }
+                          ].map(en => (
+                            <div key={en.category} className="space-y-1">
+                              <div className="flex justify-between items-center text-[10px] font-mono">
+                                <span className="text-zinc-705 text-zinc-650">{en.category}</span>
+                                <span className="font-bold">{en.count} students</span>
+                              </div>
+                              <div className="h-2 bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
+                                <div className={`h-full ${en.color}`} style={{ width: `${(en.count / 100) * 100}%` }}></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border border-zinc-150 p-4 rounded-2xl space-y-3.5">
+                        <span className="text-xs uppercase font-mono text-zinc-500 font-bold block">Top Performing Stalls of Day</span>
+                        <div className="space-y-2.5">
+                          {stalls.slice(0, 4).map(st => (
+                            <div key={st.id} className="space-y-1">
+                              <div className="flex justify-between items-center text-[10px] font-mono">
+                                <span className="text-zinc-705 text-zinc-650 line-clamp-1">{st.name.split(' ').slice(2).join(' ')}</span>
+                                <span className="font-bold">{st.likes} likes</span>
+                              </div>
+                              <div className="h-2 bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
+                                <div className="h-full bg-emerald-500" style={{ width: `${Math.min((st.likes / 65) * 100, 100)}%` }}></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Displaying Live Lists */
+                  <div className="space-y-4">
                   {announcements.map((ann, idx) => {
                     // Type styling
                     const typeStyles = {
@@ -1158,70 +1597,370 @@ export default function App() {
                     );
                   })}
                 </div>
+              )}
+            </div>
 
-              </div>
-
-              {/* Right: Add Live Updates form (Coordinators Simulator) */}
-              <div className="lg:col-span-4 bg-white border border-zinc-200 p-6 rounded-3xl shadow-xl space-y-4">
-                <div className="border-b border-zinc-100 pb-3">
-                  <h3 className="text-sm font-bold text-zinc-950 font-mono text-emerald-600">COORDINATORS SIMULATOR</h3>
-                  <p className="text-[10px] text-zinc-500">Post simulated announcements live to refine operations & emergency management drills.</p>
-                </div>
-
-                <form onSubmit={handleAddLiveAnnouncement} className="space-y-4 text-xs">
-                  <div className="space-y-1">
-                    <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono">Announcement Text</label>
-                    <textarea 
-                      required
-                      rows={3}
-                      value={newAnnText}
-                      onChange={(e) => setNewAnnText(e.target.value)}
-                      placeholder="e.g. Workshop starts in 5 minutes at Room B13, 3rd Floor."
-                      className="w-full bg-zinc-50 border border-zinc-200 p-2.5 rounded-xl focus:outline-emerald-500 text-zinc-900"
-                    />
+              {/* Right Sidebar: Campus Subsystems stack */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* 2. Campus Avatar Card */}
+                <div className="bg-gradient-to-br from-zinc-50 to-white border border-zinc-200 p-5 rounded-3xl shadow-sm space-y-4">
+                  <div className="flex items-center space-x-3 pb-3 border-b border-zinc-150-grid">
+                    <div className="relative">
+                      <img
+                        src={studentProfile.avatarUrl}
+                        alt={studentProfile.name}
+                        referrerPolicy="no-referrer"
+                        className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shadow-sm"
+                      />
+                      <span className="absolute -bottom-1 -right-1 bg-emerald-600 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-white">
+                        Lvl {getAvatarXPAndLevel().level}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-zinc-900 leading-tight">{studentProfile.name}</h4>
+                      <p className="text-[10px] text-zinc-450 font-mono">{studentProfile.branch}</p>
+                      <span className="inline-block mt-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.2 rounded">
+                        🎓 {studentProfile.title}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono">Alert Tag Level</label>
-                    <select 
-                      value={newAnnType}
-                      onChange={(e: any) => setNewAnnType(e.target.value)}
-                      className="w-full bg-zinc-50 border border-zinc-200 p-2.5 rounded-xl focus:outline-emerald-500 text-zinc-900"
-                    >
-                      <option value="info">Info Update</option>
-                      <option value="warning">Critical Venue Notice</option>
-                      <option value="alert">Closing/Emergency Alert</option>
-                      <option value="success">Success Celebratory notice</option>
-                    </select>
+                  {/* XP progress bar */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-zinc-500">XP PROGRESSION</span>
+                      <span className="font-bold text-zinc-800">
+                        {getAvatarXPAndLevel().levelXPProgress} / {getAvatarXPAndLevel().xpNeededForNext} XP
+                      </span>
+                    </div>
+                    <div className="h-2 bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500"
+                        style={{ width: `${(getAvatarXPAndLevel().levelXPProgress / getAvatarXPAndLevel().xpNeededForNext) * 100}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-[9px] text-zinc-400 font-mono">Total Points accumulated: <strong>{getAvatarXPAndLevel().totalXP} XP</strong></p>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono font-mono">Connect Event Node (Optional)</label>
-                    <select 
-                      value={newAnnEventId}
-                      onChange={(e) => setNewAnnEventId(e.target.value)}
-                      className="w-full bg-zinc-50 border border-zinc-200 p-2.5 rounded-xl focus:outline-emerald-500 text-zinc-900"
-                    >
-                      <option value="">None / Global Announcement</option>
-                      {EVENTS.map(ev => (
-                        <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  {/* Badges list */}
+                  <div className="space-y-2 pt-2 border-t border-zinc-100">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 font-mono block">EVALUATED BADGES</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {getAvatarXPAndLevel().badges.map(bd => (
+                        <div
+                          key={bd.id}
+                          className={`flex items-center space-x-1 py-1 px-2 rounded-lg text-[9px] font-medium border transition-all ${
+                            bd.unlocked
+                              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950 shadow-sm'
+                              : 'bg-zinc-50/20 border-zinc-100 text-zinc-400 opacity-60'
+                          }`}
+                          title={bd.desc}
+                        >
+                          <span className="text-xs">{bd.icon}</span>
+                          <span>{bd.name}</span>
+                        </div>
                       ))}
-                    </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Event Leaderboard Card */}
+                <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-sm space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b border-zinc-100">
+                    <div>
+                      <h3 className="text-sm font-bold text-zinc-950 flex items-center space-x-1.5">
+                        <span>🏆 Event Leaderboard</span>
+                      </h3>
+                      <p className="text-[9px] text-zinc-400 font-mono mt-0.5">Calculated in real-time from event signups, reviews, and micro-likes.</p>
+                    </div>
+                    <span className="text-[8px] bg-emerald-50 border border-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-mono font-semibold">Active Board</span>
                   </div>
 
-                  <button 
-                    type="submit"
-                    className="w-full bg-zinc-950 hover:bg-zinc-800 text-white font-bold p-3 rounded-xl transition-all font-mono text-[11px] uppercase tracking-wider"
-                  >
-                    Broadcast Real-Time Alert &rarr;
-                  </button>
-                </form>
+                  {/* Leaderboard Entries List */}
+                  <div className="space-y-2">
+                    {[
+                      { name: 'Rohan Sharma', branch: 'Computer Science', xp: 820, level: 3, avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=100&q=80', isUser: false },
+                      { name: 'Tanya Mehta', branch: 'Fine Arts', xp: 680, level: 3, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80', isUser: false },
+                      { name: 'Anusha Tottadi', branch: 'Computer Science & Eng', xp: getAvatarXPAndLevel().totalXP, level: getAvatarXPAndLevel().level, avatar: studentProfile.avatarUrl, isUser: true },
+                      { name: 'Vikram Rao', branch: 'Mechanical', xp: 420, level: 2, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80', isUser: false },
+                      { name: 'Kriti Sen', branch: 'Electrical', xp: 350, level: 2, avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&q=80', isUser: false }
+                    ]
+                      .sort((a, b) => b.xp - a.xp)
+                      .map((ld, index) => (
+                        <div
+                          key={ld.name}
+                          className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
+                            ld.isUser
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-semibold shadow-sm ring-1 ring-emerald-400'
+                              : 'bg-zinc-55 bg-zinc-50/50 border-zinc-100 text-zinc-900 font-light'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            {/* Rank Badge */}
+                            <span className={`font-mono text-xs w-4 text-center shrink-0 ${index === 0 ? 'text-amber-500 font-extrabold text-xs' : index === 1 ? 'text-zinc-400 font-bold' : index === 2 ? 'text-medium text-amber-700' : 'text-zinc-400'}`}>
+                              {index + 1}
+                            </span>
+                            
+                            <img
+                              src={ld.avatar}
+                              alt={ld.name}
+                              referrerPolicy="no-referrer"
+                              className="w-7 h-7 rounded-full object-cover border border-zinc-200 shrink-0"
+                            />
+                            
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold truncate flex items-center gap-1">
+                                {ld.name}
+                                {ld.isUser && <span className="text-[7px] bg-emerald-600 text-white px-1 rounded shrink-0">YOU</span>}
+                              </p>
+                              <span className="text-[8px] text-zinc-400 font-mono block truncate">{ld.branch}</span>
+                            </div>
+                          </div>
 
-                <div className="text-[10px] text-zinc-400 leading-normal text-center pt-2">
-                  🛡️ This simulator operates on standard active state. Reloading may restore pre-engineered database presets.
+                          <div className="text-right flex items-center space-x-2 shrink-0 pl-1">
+                            <span className="text-[9px] text-zinc-500 font-mono font-bold">{ld.xp} XP</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Coordinators Simulator Card */}
+                <div className="bg-white border border-zinc-200 p-5 rounded-3xl shadow-sm space-y-4">
+                  <div className="border-b border-zinc-100 pb-3">
+                    <h3 className="text-xs font-bold text-zinc-900 font-mono text-emerald-600 uppercase">COORDINATORS SIMULATOR</h3>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">Broadcast custom emergency notifications or offer alerts across active states.</p>
+                  </div>
+
+                  <form onSubmit={handleAddLiveAnnouncement} className="space-y-4 text-xs">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono">Announcement Text</label>
+                      <textarea 
+                        required
+                        rows={3}
+                        value={newAnnText}
+                        onChange={(e) => setNewAnnText(e.target.value)}
+                        placeholder="e.g. Workshop starts in 5 minutes at Room B13, 3rd Floor."
+                        className="w-full bg-zinc-50 border border-zinc-200 p-2.5 rounded-xl focus:outline-emerald-500 text-zinc-950"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono">Alert Tag Level</label>
+                      <select 
+                        value={newAnnType}
+                        onChange={(e: any) => setNewAnnType(e.target.value)}
+                        className="w-full bg-zinc-50 border border-zinc-200 p-2.5 rounded-xl focus:outline-emerald-500 text-zinc-850"
+                      >
+                        <option value="info">💡 General Information Announcement</option>
+                        <option value="warning">⚠️ Venue Relocation Alert</option>
+                        <option value="alert">⏳ Entry Gates Timer Warning</option>
+                        <option value="success">🎉 Participant Success Celebration</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono">Connect Event Node (Optional)</label>
+                      <select 
+                        value={newAnnEventId}
+                        onChange={(e) => setNewAnnEventId(e.target.value)}
+                        className="w-full bg-zinc-50 border border-zinc-200 p-2.5 rounded-xl focus:outline-emerald-500 text-zinc-850"
+                      >
+                        <option value="">None / Global Announcement</option>
+                        {EVENTS.map(ev => (
+                          <option key={ev.id} value={ev.id}>{ev.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      className="w-full bg-zinc-950 hover:bg-zinc-800 text-white font-bold p-3 rounded-xl transition-all font-mono text-[11px] uppercase tracking-wider block"
+                    >
+                      Broadcast Real-Time Alert &rarr;
+                    </button>
+                  </form>
+
+                  <div className="text-[10px] text-zinc-400 text-center leading-normal pt-1 border-t border-zinc-100">
+                    🛡️ Simulator operates on active state memory. Reloading restores default database entries.
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* 6. Smart Campus Map with Interactive Walk Routing Block */}
+            <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm space-y-5">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="p-1 px-2.5 bg-zinc-900 text-white font-mono rounded text-[9px] font-bold">MAP MODULE</span>
+                  <h3 className="text-base font-extrabold text-zinc-950">
+                    📍 Smart Campus Compass & Venue Locator
+                  </h3>
+                </div>
+                <p className="text-xs text-zinc-400 font-mono mt-1">
+                  Offline walk directions, stall mapping corridors, and visual route markers.
+                </p>
+              </div>
+
+              {/* Destination selector */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-zinc-50 p-4 rounded-2xl border border-zinc-150">
+                <div className="md:col-span-4 space-y-1">
+                  <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono">Target Category</label>
+                  <select
+                    value={mapTargetType}
+                    onChange={(e) => {
+                      setMapTargetType(e.target.value as any);
+                      setIsShowingMapPath(false);
+                      if (e.target.value === 'venue') {
+                        setMapTargetId(EVENTS[0].id);
+                      } else {
+                        setMapTargetId(stalls[0].id);
+                      }
+                    }}
+                    className="w-full bg-white border border-zinc-200 p-2 rounded-xl text-xs focus:outline-emerald-500 text-zinc-900"
+                  >
+                    <option value="venue">🎤 Events & Workshops Venues</option>
+                    <option value="stall">🛍️ Food & Swag Stalls</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-5 space-y-1">
+                  <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono">Select Destination Location Node</label>
+                  <select
+                    value={mapTargetId}
+                    onChange={(e) => {
+                      setMapTargetId(e.target.value);
+                      setIsShowingMapPath(false);
+                    }}
+                    className="w-full bg-white border border-zinc-200 p-2 rounded-xl text-xs focus:outline-emerald-500 text-zinc-900"
+                  >
+                    {mapTargetType === 'venue' ? (
+                      EVENTS.map(ev => (
+                        <option key={ev.id} value={ev.id}>{ev.name} ({ev.venue.split(',')[0]})</option>
+                      ))
+                    ) : (
+                      stalls.map(st => (
+                        <option key={st.id} value={st.id}>{st.name} ({st.location.split(',')[0]})</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div className="md:col-span-3 flex items-end">
+                  <button
+                    onClick={() => {
+                      setIsShowingMapPath(true);
+                      triggerToast("🧭 Route plotted on the local ground blueprint! Steps compiled on right panel.");
+                    }}
+                    className="w-full bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center space-x-1"
+                  >
+                    <span>Get Walking Directions &rarr;</span>
+                  </button>
                 </div>
               </div>
 
+              {/* Coordinates layout split */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Visual coordinate board representation */}
+                <div className="lg:col-span-7 bg-zinc-950 rounded-2xl relative p-5 border border-zinc-850 h-[300px] overflow-hidden flex flex-col justify-between">
+                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                  
+                  {/* Grid elements */}
+                  <div className="relative h-full text-white font-mono text-[9px]">
+                    <span className="absolute left-4 top-4 bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-850">
+                      🏢 Vance Block (A-Wing Labs)
+                    </span>
+                    <span className="absolute right-4 top-8 bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-850">
+                      🔬 Seminar Hall B (AI workshops)
+                    </span>
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-850">
+                      🍔 Row B Food Stalls
+                    </span>
+                    <span className="absolute right-8 top-1/2 -translate-y-1/2 bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-850">
+                      📚 Library Annex Block
+                    </span>
+                    <span className="absolute right-12 bottom-12 bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-850">
+                      🎡 OAT Ground Canopy (Sports)
+                    </span>
+                    <span className="absolute left-4 bottom-4 bg-emerald-600 text-white px-2 py-0.5 rounded animate-pulse shadow-md shadow-emerald-500/20">
+                      🟢 Entrance Arch Node
+                    </span>
+
+                    {/* Target bubble indicator */}
+                    {isShowingMapPath && (
+                      <div className="absolute transition-all duration-700 bg-emerald-400 text-zinc-950 font-black px-2.5 py-1.5 rounded-lg shadow-lg shadow-emerald-400/30 border border-white top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 animate-bounce">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-950 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-900"></span>
+                        </span>
+                        <span>{mapTargetType === 'venue' ? 'EVENT VENUE AREA' : 'FOOD & SWAG STALL CORE'}</span>
+                      </div>
+                    )}
+
+                    {/* SVG routing trace line overlay */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                      {isShowingMapPath ? (
+                        <path
+                          d="M 40,240 Q 120,180 200,160 T 320,130"
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          className="animate-[dash_2s_linear_infinite]"
+                          style={{
+                            strokeDasharray: '8,4',
+                          }}
+                        />
+                      ) : (
+                        <line x1="40" y1="240" x2="320" y2="130" stroke="#ffffff" strokeWidth="0.5" strokeOpacity="0.1" />
+                      )}
+                    </svg>
+                  </div>
+
+                  <span className="relative z-10 text-[9px] text-zinc-500 font-mono tracking-wider">CAMPUS GROUND COMPASS SCHEMATIC GRID • SECURE OFF-LINE RENDERING</span>
+                </div>
+
+                {/* Spatial steps panel instructions breakdown */}
+                <div className="lg:col-span-5 bg-zinc-50 border border-zinc-150 p-5 rounded-2xl flex flex-col justify-between text-xs space-y-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 font-mono">Dynamic Path Trace Instructions:</span>
+                  
+                  {isShowingMapPath ? (
+                    <div className="space-y-3.5 text-zinc-805 text-zinc-700 font-medium">
+                      <div className="flex items-start gap-2.5">
+                        <span className="bg-emerald-100 text-emerald-800 font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">1</span>
+                        <p className="leading-relaxed">Proceed 40 meters from the **Entrance Arch Node**, passing behind the safety briefing cabin.</p>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="bg-emerald-100 text-emerald-800 font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">2</span>
+                        <p className="leading-relaxed">Rotate northeast toward the main foyer lawn. Walk along the yellow floor coordinates trace lines.</p>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="bg-emerald-100 text-emerald-800 font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">3</span>
+                        <p className="leading-relaxed">
+                          {mapTargetType === 'venue' ? (
+                            <span>Target spot located inside **{EVENTS.find(e => e.id === mapTargetId)?.venue}**! Signs of {EVENTS.find(e => e.id === mapTargetId)?.name} are posted at the entrance.</span>
+                          ) : (
+                            <span>Reach stall booth **{stalls.find(s => s.id === mapTargetId)?.name}** near **{stalls.find(s => s.id === mapTargetId)?.location}**! Grab menu items shown in menu sheet.</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-zinc-400 text-center py-8">
+                      <p className="font-mono">Select a coordinates destination point and click &quot;Get Walking Directions&quot; above to trace walking steps corridor guide map.</p>
+                    </div>
+                  )}
+
+                  <div className="pt-3 border-t border-zinc-150 flex justify-between items-center text-[10px] font-mono text-zinc-400">
+                    <span>GPS Sync: 🟢 STRONG</span>
+                    <span>Distance: ~150 meters</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>
@@ -1293,22 +2032,61 @@ export default function App() {
                         <p className="text-center font-mono text-[9px] text-zinc-400 tracking-widest leading-none">||| * {reg.userPhone} * RECEIPT * |||</p>
                       </div>
 
-                      {/* Actions */}
-                      <div className="pt-4 flex items-center justify-between text-xs font-semibold">
-                        <span className="text-zinc-400">Issued Receipt (June 2026)</span>
-                        <div className="flex space-x-2">
+                      {/* Actions with Certificate & QR Capabilities */}
+                      <div className="pt-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 text-xs font-semibold">
+                        <span className="text-zinc-400">Issued Pass (June 2026)</span>
+                        <div className="flex flex-wrap gap-2 justify-end">
                           <button
-                            onClick={() => handleCancelTicket(reg.eventId, reg.userEmail)}
-                            className="text-rose-600 hover:text-rose-800 hover:underline transition-colors font-mono"
+                            onClick={() => {
+                              setActiveCertificateReg(reg);
+                              triggerToast(`🎓 Loaded academic credentials for claiming participation award: ${reg.eventName}`);
+                            }}
+                            className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] flex items-center gap-1.5"
                           >
-                            Resign Pass
+                            <span>🎓 Claim Certificate</span>
                           </button>
-                          
+
+                          <button
+                            onClick={() => {
+                              // Select the stall corresponding to this event or default first
+                              const correspondingStall = stalls.find(s => s.eventId === reg.eventId) || stalls[0];
+                              setSelectedOrderStall(correspondingStall);
+                              setSelectedMenuIndex(0);
+                              setOrderQuantity(1);
+                              triggerToast(`📱 Scanned stall-boarding QR sequence at ${correspondingStall?.name || 'Carnival'}!`);
+                            }}
+                            className="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] flex items-center gap-1.5"
+                          >
+                            <span>📱 Order via QR</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setActiveQrModal({
+                                type: 'ticket',
+                                id: `AS-PASS-${Math.abs(reg.eventId.hashCode())}`,
+                                title: reg.eventName,
+                                subtitle: `Attendee: ${reg.userName} (${reg.userBranch})`
+                              });
+                              triggerToast(`🔑 Opened live entry gate scanning QR code`);
+                            }}
+                            className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-800 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] flex items-center gap-1.5"
+                          >
+                            <span>🔑 Gate Scan QR</span>
+                          </button>
+
                           <button 
                             onClick={() => window.print()}
-                            className="bg-zinc-105 border border-zinc-300 hover:bg-zinc-100 text-zinc-850 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px]"
+                            className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 px-2.5 py-1.5 rounded-xl font-bold transition-all text-[11px]"
                           >
-                            Print PDF &rarr;
+                            Print &rarr;
+                          </button>
+
+                          <button
+                            onClick={() => handleCancelTicket(reg.eventId, reg.userEmail)}
+                            className="text-rose-600 hover:text-rose-800 hover:underline transition-colors font-mono text-[11px] self-center ml-1"
+                          >
+                            Resign
                           </button>
                         </div>
                       </div>
@@ -1563,6 +2341,50 @@ export default function App() {
               </div>
             </div>
 
+            {/* 5. Best Stall of the Day Section */}
+            {stalls.length > 0 && (
+              <div className="bg-gradient-to-br from-amber-500/10 via-amber-600/5 to-zinc-50 border border-amber-200 rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                
+                <div className="space-y-3 max-w-2xl text-center md:text-left">
+                  <div className="inline-flex items-center space-x-1.5 bg-amber-500/20 border border-amber-500/30 text-amber-900 px-3 py-1 rounded-full text-[10px] font-bold font-mono">
+                    <span>🏆 BEST STALL OF THE DAY CHAMPION</span>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-extrabold text-zinc-950 tracking-tight flex items-center justify-center md:justify-start gap-2">
+                      👑 {stalls.reduce((max, s) => s.likes > max.likes ? s : max, stalls[0]).name}
+                    </h2>
+                    <p className="text-xs text-zinc-650 leading-relaxed font-light mt-1">
+                      Outstanding hygiene rating, exceptional peer recommendations, and dynamic student commerce! Leads the carnival boards with **{stalls.reduce((max, s) => s.likes > max.likes ? s : max, stalls[0]).likes} live upvotes**.
+                    </p>
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-500">
+                    Category: <strong className="text-zinc-800">{stalls.reduce((max, s) => s.likes > max.likes ? s : max, stalls[0]).category}</strong> • Location: <strong className="text-zinc-800">{stalls.reduce((max, s) => s.likes > max.likes ? s : max, stalls[0]).location}</strong>
+                  </div>
+                </div>
+
+                <div className="shrink-0 flex flex-col items-center gap-2 bg-white border border-zinc-200 p-4 rounded-2xl shadow-sm text-center">
+                  <span className="text-[9px] text-amber-600 font-mono font-bold tracking-wider uppercase">Active Rating</span>
+                  <div className="text-2xl font-black text-amber-500 font-mono tracking-tighter">
+                    ⭐ {(stalls.reduce((max, s) => s.likes > max.likes ? s : max, stalls[0]).feedbacks.reduce((sum, f) => sum + f.rating, 0) / Math.max(stalls.reduce((max, s) => s.likes > max.likes ? s : max, stalls[0]).feedbacks.length, 1)).toFixed(1)}
+                  </div>
+                  <button
+                    onClick={() => {
+                      const bestSt = stalls.reduce((max, s) => s.likes > max.likes ? s : max, stalls[0]);
+                      setMapTargetType('stall');
+                      setMapTargetId(bestSt.id);
+                      setIsShowingMapPath(true);
+                      setActiveTab('dashboard');
+                      triggerToast(`📍 Switched live map directions to guide you straight to best-rated: ${bestSt.name}`);
+                    }}
+                    className="text-[10px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold py-2 px-3 rounded-xl transition-colors font-mono tracking-wide flex items-center gap-1 shrink-0"
+                  >
+                    <span>View on Compass Map</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Results Grid layout */}
             {stalls.filter(st => {
               const matchesCategory = stallsCategoryTab === 'All' || 
@@ -1658,6 +2480,21 @@ export default function App() {
                             <span className="text-emerald-700 font-bold font-mono text-xs">{st.priceRange || '₹40 - ₹120'}</span>
                           </div>
                         </div>
+
+                        {/* Itemized Menu & Pricing List with prices in Indian Rupees (INR) */}
+                        {st.menu && st.menu.length > 0 && (
+                          <div className="space-y-2 mt-3 pt-3 border-t border-dashed border-zinc-250">
+                            <span className="text-[9px] font-extrabold text-zinc-450 tracking-wider font-mono block uppercase">📋 Food & Swag Menu (INR Price):</span>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {st.menu.map((menuItem: any, mIdx: number) => (
+                                <div key={mIdx} className="flex justify-between items-center text-[10px] bg-zinc-50 border border-zinc-150 p-1.5 rounded-lg text-zinc-800">
+                                  <span className="truncate font-medium text-zinc-650">{menuItem.name}</span>
+                                  <span className="font-extrabold text-emerald-800 shrink-0 font-mono text-[9px] bg-emerald-50 px-1 rounded">₹{menuItem.price}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Card Lower: Live Like & Review controls */}
@@ -1743,6 +2580,39 @@ export default function App() {
                               />
                             </div>
 
+                            {/* Dynamic Photo Attachment Presets */}
+                            <div className="space-y-1 bg-zinc-50 p-2.5 rounded-xl border border-zinc-200/60">
+                              <label className="block text-[8px] uppercase font-bold text-emerald-800 font-mono">📸 Live Photo Attachment (Optional):</label>
+                              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                                {STALL_SNAP_PRESETS.map((preset) => (
+                                  <button
+                                    key={preset.name}
+                                    type="button"
+                                    onClick={() => {
+                                      if (reviewPhotoPreset === preset.url) {
+                                        setReviewPhotoPreset('');
+                                        triggerToast(`❌ Removed attachment: ${preset.name}`);
+                                      } else {
+                                        setReviewPhotoPreset(preset.url);
+                                        triggerToast(`📸 Attached live snapshot: ${preset.name}`);
+                                      }
+                                    }}
+                                    className={`relative h-10 rounded-lg overflow-hidden border-2 transition-all flex items-center justify-center ${
+                                      reviewPhotoPreset === preset.url 
+                                        ? 'border-emerald-500 ring-2 ring-emerald-500/20 scale-95 shadow-sm' 
+                                        : 'border-transparent opacity-75 hover:opacity-100 hover:scale-[102%]'
+                                    }`}
+                                  >
+                                    <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[7px] text-white text-center py-0.5 tracking-tight font-mono truncate">{preset.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                              {reviewPhotoPreset && (
+                                <p className="text-[8px] text-emerald-600 font-mono mt-1 font-bold">✨ Photo Attached successfully! SUBMIT review to post.</p>
+                              )}
+                            </div>
+
                             <button 
                               type="submit"
                               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 rounded-xl transition-all shadow-md shadow-emerald-400/20 uppercase tracking-widest text-center"
@@ -1768,6 +2638,13 @@ export default function App() {
                                     </div>
                                   </div>
                                   <p className="text-zinc-600 italic">&quot;{f.review}&quot;</p>
+                                  
+                                  {f.photoUrl && (
+                                    <div className="mt-1.5 relative rounded-lg overflow-hidden border border-zinc-200 aspect-video h-14 max-w-[120px] shrink-0">
+                                      <img src={f.photoUrl} alt="Visual review snap" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    </div>
+                                  )}
+
                                   <span className="block text-[8px] text-zinc-400 text-right font-mono">{new Date(f.timestamp).toLocaleDateString()}</span>
                                 </div>
                               ))}
@@ -2152,6 +3029,529 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* ======================================================================= */}
+      {/* 1. NOTIFICATIONS SYSTEM DRAWER OVERLAY */}
+      {/* ======================================================================= */}
+      {isNotificationsOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-zinc-950/50 backdrop-blur-sm animate-fade-in font-sans">
+          <div className="absolute inset-0" onClick={() => setIsNotificationsOpen(false)}></div>
+          
+          <div className="bg-white w-full max-w-md h-full flex flex-col justify-between shadow-2xl relative z-10 animate-slide-left border-l border-zinc-200">
+            {/* Header */}
+            <div className="p-5 border-b border-zinc-150 flex items-center justify-between bg-zinc-950 text-white">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30">
+                  <Bell className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm tracking-tight">Active Bell Bulletins</h3>
+                  <p className="text-[10px] text-zinc-400 font-mono">Live Surampalem Campus Feed</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsNotificationsOpen(false)}
+                className="p-1.5 hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-colors"
+                title="Minimize drawer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* List Feed */}
+            <div className="p-5 flex-grow overflow-y-auto space-y-3.5">
+              <div className="flex justify-between items-center pb-2 border-b border-zinc-100">
+                <span className="text-[10px] text-zinc-400 font-bold font-mono tracking-wider">BULLETINS ({notifications.length})</span>
+                <button
+                  onClick={() => {
+                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                    triggerToast("🧹 Marked all notifications as read!");
+                  }}
+                  className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold"
+                >
+                  Mark all as read
+                </button>
+              </div>
+
+              {notifications.length > 0 ? (
+                notifications.map((notif) => (
+                  <div 
+                    key={notif.id}
+                    className={`p-4 rounded-2xl border transition-all text-xs flex gap-3 ${
+                      notif.isRead 
+                        ? 'bg-zinc-50 border-zinc-200 text-zinc-600' 
+                        : 'bg-emerald-50/20 border-emerald-100 text-zinc-950 font-medium shadow-sm'
+                    }`}
+                  >
+                    <div className="shrink-0 mt-0.5">
+                      {notif.type === 'alert' && <AlertTriangle className="w-4 h-4 text-amber-500 font-bold" />}
+                      {notif.type === 'warning' && <AlertTriangle className="w-4 h-4 text-rose-500 font-bold" />}
+                      {notif.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                      {notif.type === 'info' && <Bell className="w-4 h-4 text-emerald-600 animate-bounce" />}
+                    </div>
+                    
+                    <div className="flex-grow space-y-1.5">
+                      <p className="leading-relaxed text-zinc-805">{notif.text}</p>
+                      
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[8px] font-mono text-zinc-400">{notif.timestamp}</span>
+                        <button
+                          onClick={() => handleNotificationAction(notif)}
+                          className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold tracking-tight inline-flex items-center gap-0.5"
+                        >
+                          <span>{notif.actionLabel || 'Navigate →'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-16 space-y-2 text-zinc-400 max-w-xs mx-auto">
+                  <Bell className="w-10 h-10 mx-auto text-zinc-300" />
+                  <p className="text-xs font-light">Your bulletins feed is currently empty.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer status bar */}
+            <div className="p-4 bg-zinc-50 border-t border-zinc-200 font-mono text-[9px] text-zinc-400 text-center uppercase tracking-wider">
+              🟢 AEC SATCOM Receiver Status: Active
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================================= */}
+      {/* 2. INSTAGRAM STORY VERTICAL CELL SLIDER OVERLAY */}
+      {/* ======================================================================= */}
+      {activeStory && (() => {
+        const storiesList = [
+          { id: '1', campus: 'Aditya Engineering College', title: 'Aditya Swag Fest', image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=600&q=80', description: 'Massive line at student food court! Custom hoodies have officially sold out, but departmental t-shirts are still in stock.', tag: 'Swag Sale' },
+          { id: '2', campus: 'Geethanjali Inst of Tech', title: 'RoboQuest Tech Arena', image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=600&q=80', description: 'Robo-sumo match heating up. AEC Vanguard bot secures first place in regional qualifiers!', tag: 'Live Tech Battle' },
+          { id: '3', campus: 'Sri Vasavi Engineering College', title: 'Vasavi Hack-Elite', image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&w=600&q=80', description: 'Team Byte-Benders presenting their custom IoT cloud farm telemetry project for regional evaluation.', tag: 'Presentation Round' },
+          { id: '4', campus: 'Aditya Engineering College', title: 'Surampalem Musical Evening', image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80', description: 'Folk singers and acoustic rock bands live on the main lawn. Audience estimates: 1,800 students!', tag: 'Live Concert' }
+        ];
+        const currentIdx = storiesList.findIndex(s => s.id === activeStory.id) !== -1 ? storiesList.findIndex(s => s.id === activeStory.id) : 0;
+        
+        const goToNext = () => {
+          if (currentIdx < storiesList.length - 1) {
+            setActiveStory(storiesList[currentIdx + 1]);
+          } else {
+            setActiveStory(null);
+            triggerToast("✨ Custom story catalog loop completed!");
+          }
+        };
+
+        const goToPrev = () => {
+          if (currentIdx > 0) {
+            setActiveStory(storiesList[currentIdx - 1]);
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-md animate-fade-in font-sans p-4">
+            <div className="absolute inset-0 cursor-pointer" onClick={() => setActiveStory(null)}></div>
+            
+            {/* Main story shell */}
+            <div className="bg-zinc-900 border border-zinc-800 w-full max-w-sm h-[580px] rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col justify-between animate-scale-up">
+              {/* Backing Image */}
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-zinc-950/70 z-0 pointer-events-none"></div>
+              <img 
+                src={activeStory.image} 
+                alt={activeStory.title} 
+                className="absolute inset-0 w-full h-full object-cover select-none z-[-1]"
+                referrerPolicy="no-referrer"
+              />
+
+              {/* Progress Bar Timeline */}
+              <div className="p-3.5 z-10 space-y-3">
+                <div className="grid grid-cols-4 gap-1.5">
+                  {storiesList.map((storyItem, sIdx) => (
+                    <div 
+                      key={storyItem.id} 
+                      className={`h-1.5 rounded-full ${
+                        sIdx <= currentIdx ? 'bg-emerald-500' : 'bg-white/20'
+                      }`}
+                    ></div>
+                  ))}
+                </div>
+
+                {/* Sender Tag Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 border border-emerald-400 flex items-center justify-center font-bold text-xs text-zinc-950">
+                      🏅
+                    </div>
+                    <div>
+                      <h4 className="text-[11px] font-black tracking-tight text-white">{activeStory.campus}</h4>
+                      <p className="text-[9px] text-zinc-300 font-mono flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-amber-400 fill-current" /> Live Event Stories
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setActiveStory(null)}
+                    className="p-1 px-2.0 hover:bg-white/10 rounded-full text-zinc-300 hover:text-white transition-all text-xs"
+                    title="Close slideshow"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Interactive side-paddles click area */}
+              <div className="absolute inset-x-0 top-1/3 bottom-1/4 flex justify-between z-10 px-2 pointer-events-none">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); goToPrev(); }}
+                  disabled={currentIdx === 0}
+                  className={`pointer-events-auto w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 border border-white/10 text-white flex items-center justify-center text-sm font-bold transition-all ${
+                    currentIdx === 0 ? 'opacity-20 cursor-not-allowed' : 'opacity-100 hover:scale-105 active:scale-95'
+                  }`}
+                  title="Previous story"
+                >
+                  ‹
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); goToNext(); }}
+                  className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 border border-white/10 text-white flex items-center justify-center text-sm font-bold transition-all hover:scale-105 active:scale-95"
+                  title="Next story"
+                >
+                  ›
+                </button>
+              </div>
+
+              {/* Description visual drawer */}
+              <div className="p-5 z-10 bg-gradient-to-t from-black/90 via-black/80 to-transparent pt-12 text-white space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="bg-emerald-600/90 text-white font-mono px-2 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-widest leading-none">
+                    {activeStory.tag}
+                  </span>
+                  <span className="text-[9px] text-zinc-300 font-mono uppercase font-bold text-amber-400">🔥 SURAMPALEM CAMPUS</span>
+                </div>
+                <h3 className="text-base font-black tracking-tight">{activeStory.title}</h3>
+                <p className="text-xs text-zinc-250 leading-relaxed font-light">{activeStory.description}</p>
+                <div className="flex justify-between items-center text-[9px] font-mono text-zinc-400 pt-2 border-t border-white/10">
+                  <span>TAP LEFT/RIGHT ARROWS TO OVERRIDE</span>
+                  <button 
+                    onClick={() => setActiveStory(null)}
+                    className="font-bold text-emerald-400 text-[10px] hover:underline"
+                  >
+                    Done Slide
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ======================================================================= */}
+      {/* 3. DIGITAL CERTIFICATE ACHIEVEMENT MODAL */}
+      {/* ======================================================================= */}
+      {activeCertificateReg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/75 backdrop-blur-sm animate-fade-in font-sans p-4">
+          <div className="absolute inset-0" onClick={() => setActiveCertificateReg(null)}></div>
+          
+          <div className="bg-amber-50/15 max-w-3xl w-full rounded-3xl overflow-hidden shadow-2xl relative z-10 border border-amber-200/50 flex flex-col justify-between animate-scale-up">
+            {/* Gold Crown Ribbon Header */}
+            <div className="bg-zinc-950 text-white p-4 px-6 flex justify-between items-center">
+              <div className="flex items-center gap-1.5">
+                <Award className="w-5 h-5 text-amber-400" />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">AEC ACADEMIC COGNIZANCE REGISTRY</span>
+              </div>
+              <button 
+                onClick={() => setActiveCertificateReg(null)}
+                className="text-zinc-400 hover:text-white font-bold text-xs"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Inner Certificate layout resembling creamy security bond paper */}
+            <div className="p-10 bg-white border-8 border-double border-zinc-900 m-6 rounded-2xl relative text-center space-y-6 select-none shadow-inner">
+              <div className="absolute top-4 left-4 w-12 h-12 border-t-2 border-l-2 border-amber-400 pointer-events-none"></div>
+              <div className="absolute top-4 right-4 w-12 h-12 border-t-2 border-r-2 border-amber-400 pointer-events-none"></div>
+              <div className="absolute bottom-4 left-4 w-12 h-12 border-b-2 border-l-2 border-amber-400 pointer-events-none"></div>
+              <div className="absolute bottom-4 right-4 w-12 h-12 border-b-2 border-r-2 border-amber-400 pointer-events-none"></div>
+
+              {/* Crest Seal */}
+              <div className="mx-auto flex items-center justify-center w-14 h-14 bg-zinc-950 rounded-full border-4 border-amber-400 text-amber-400 font-mono font-bold select-none text-2xl shadow">
+                AEC
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-widest">Achievers Slot Academic Excellence</span>
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight font-sans uppercase">Certificate of Participation</h2>
+                <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent mx-auto mt-2"></div>
+              </div>
+
+              <div className="space-y-3 max-w-xl mx-auto">
+                <p className="text-xs text-zinc-400 font-serif italic">This is officially recorded & verified to confirm that student</p>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-zinc-950 font-sans tracking-tight border-b-2 border-zinc-150 inline-block px-8 py-0.5">{activeCertificateReg.userName}</h3>
+                <p className="text-xs text-zinc-500 font-mono tracking-tight">{activeCertificateReg.userBranch} Department branch of AEC</p>
+                <p className="text-xs text-zinc-650 font-serif leading-relaxed px-4">
+                  has demonstrated outstanding engagement, student responsibility, and proactive collaborative skills by participating in the collegiate carnival arena:
+                </p>
+                <div className="bg-zinc-55 bg-zinc-50 border border-zinc-200/60 rounded-xl p-3 max-w-md mx-auto">
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase block tracking-wider">EVENT REGISTERED & ATTENDED</span>
+                  <strong className="text-sm font-extrabold text-zinc-950 uppercase">{activeCertificateReg.eventName}</strong>
+                </div>
+              </div>
+
+              {/* Signatures Column */}
+              <div className="grid grid-cols-2 gap-10 max-w-lg mx-auto pt-4 border-t border-dashed border-zinc-150 text-left text-xs text-zinc-500">
+                <div className="space-y-1 text-center">
+                  <div className="font-mono text-amber-600/80 italic text-sm font-bold">K. Ranga Swamy</div>
+                  <div className="border-t border-zinc-300 w-3/4 mx-auto pt-1 font-mono text-[9px] uppercase tracking-wider">Prof. K. Ranga Swamy<br/>Dean of Academics</div>
+                </div>
+                <div className="space-y-1 text-center">
+                  <div className="font-mono text-emerald-700/80 italic text-sm font-bold">Dr. S. Devender</div>
+                  <div className="border-t border-zinc-300 w-3/4 mx-auto pt-1 font-mono text-[9px] uppercase tracking-wider">Dr. S. Devender Prasad<br/>Convene Chairman</div>
+                </div>
+              </div>
+
+              {/* Footnote receipt details */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 max-w-xl mx-auto text-[8px] font-mono text-zinc-400">
+                <span>VERIFY CODE: AEC-REG-{Math.abs(activeCertificateReg.eventId.hashCode() || 4118).toString(16).toUpperCase()}</span>
+                <span>TIMESTAMP: {new Date(activeCertificateReg.registrationTimestamp || "2026-06-15T10:00:00Z").toLocaleDateString()}</span>
+                <span className="bg-zinc-100 p-1 text-[7px] border border-zinc-200">||| SECURED DIGITAL TOKEN AUTHENTICATED |||</span>
+              </div>
+            </div>
+
+            {/* Quick Actions Panel */}
+            <div className="bg-zinc-50 p-4 border-t border-zinc-200 flex justify-between gap-4 font-mono text-xs font-bold">
+              <span className="text-zinc-450 text-[10px] self-center">✨ Claiming earns you **LEVEL 3 Badges** if not already unlocked!</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    window.print();
+                    triggerToast("🖨️ PDF print signal sent successfully! Stored digital completion ticket.");
+                  }}
+                  className="bg-zinc-950 text-white font-bold hover:bg-zinc-800 px-4 py-2 rounded-xl transition-all font-mono text-xs uppercase tracking-wide flex items-center gap-1"
+                >
+                  Download PDF Reciept
+                </button>
+                <button
+                  onClick={() => setActiveCertificateReg(null)}
+                  className="bg-white border border-zinc-300 hover:bg-zinc-100 text-zinc-800 px-4 py-2 rounded-xl text-xs transition-all"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================================= */}
+      {/* 4. BIOMETRIC ENTRANCE GATE CHECK-IN QR MODAL (ACTIVE QR MODAL) */}
+      {/* ======================================================================= */}
+      {activeQrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/75 backdrop-blur-sm animate-fade-in font-sans p-4">
+          <div className="absolute inset-0" onClick={() => setActiveQrModal(null)}></div>
+          
+          <div className="bg-white border-2 border-zinc-950 w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl relative z-10 animate-scale-up text-center">
+            {/* Header top colored */}
+            <div className="bg-zinc-950 text-white p-4 text-[11px] font-mono uppercase tracking-widest font-bold">
+              🔑 BIOMETRIC GATE ACCESS TOKEN
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <h3 className="font-extrabold text-base text-zinc-950 tracking-tight leading-snug">{activeQrModal.title}</h3>
+                {activeQrModal.subtitle && (
+                  <p className="text-[11px] text-zinc-400 font-mono mt-1">{activeQrModal.subtitle}</p>
+                )}
+              </div>
+
+              {/* Dynamic visual grid representing 2D code matrix */}
+              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-3xl inline-block shadow-sm">
+                <div className="grid grid-cols-10 gap-0.5 w-44 h-44 bg-white p-2.5 border border-zinc-300 mx-auto rounded-xl">
+                  {Array.from({ length: 100 }).map((_, pIdx) => {
+                    const isFilled = (pIdx * 5 + 47) % 3 === 0 || pIdx < 10 || pIdx % 10 === 0 || pIdx > 90 || pIdx % 10 === 9 || (pIdx > 40 && pIdx < 60 && pIdx % 4 === 0);
+                    return (
+                      <div 
+                        key={pIdx} 
+                        className={`w-full h-full rounded-[1px] ${
+                          isFilled ? 'bg-zinc-950' : 'bg-transparent'
+                        }`}
+                      ></div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-zinc-50 rounded-2xl p-3 border border-zinc-150 text-[11px] text-zinc-500 leading-relaxed max-w-xs mx-auto text-left space-y-1 font-light">
+                <p className="font-bold text-zinc-800 font-mono text-[9px] uppercase tracking-wide">🔓 GATE CHECK-IN PROTOCOL:</p>
+                <p>1. Align this unique barcode pass at gates check-in terminal scanner.</p>
+                <p>2. Keep brightness high. Gate lasers will automatically authorize entry.</p>
+                <p className="font-mono text-[10px] text-zinc-900 font-bold bg-white p-1 rounded-md text-center border mt-1">
+                  ID: {activeQrModal.id}
+                </p>
+              </div>
+            </div>
+
+            {/* Close footer button */}
+            <div className="p-4 bg-zinc-50 border-t flex justify-end">
+              <button
+                onClick={() => setActiveQrModal(null)}
+                className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-2 rounded-xl text-xs transition-colors"
+              >
+                Close Pass Viewer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================================= */}
+      {/* 5. INSTANT QR-STALL ORDERING AND CHECKOUT COMPILING TERMINAL */}
+      {/* ======================================================================= */}
+      {selectedOrderStall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/75 backdrop-blur-sm animate-fade-in font-sans p-4">
+          <div className="absolute inset-x-0 inset-y-0" onClick={() => setSelectedOrderStall(null)}></div>
+          
+          <div className="bg-white border w-full max-w-md rounded-3xl overflow-hidden shadow-2xl relative z-10 animate-scale-up">
+            
+            {/* Main top info banner */}
+            <div className="bg-zinc-950 p-5 text-white flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Store className="w-5 h-5 text-amber-500" />
+                <div>
+                  <h3 className="font-extrabold text-sm tracking-tight">📱 Stall Ordering QR Terminal</h3>
+                  <p className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">{selectedOrderStall.category}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedOrderStall(null)}
+                className="text-zinc-400 hover:text-white font-bold text-xs"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Inner catalog selections */}
+            <div className="p-5 space-y-4">
+              <div className="border-b border-zinc-150 pb-3">
+                <h4 className="text-sm font-black text-zinc-900">{selectedOrderStall.name}</h4>
+                <p className="text-xs text-zinc-500 font-light mt-0.5">Location: <span className="font-mono uppercase font-bold text-emerald-800">{selectedOrderStall.location}</span></p>
+              </div>
+
+              {/* Items List Catalog dropdown selection */}
+              <div className="space-y-1">
+                <label className="block text-[10px] uppercase font-bold text-zinc-500 font-mono tracking-wide">Select Item to Purchase:</label>
+                <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                  {selectedOrderStall.menu && selectedOrderStall.menu.length > 0 ? (
+                    selectedOrderStall.menu.map((mItem: any, idx: number) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedMenuIndex(idx)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl border text-xs text-left transition-all ${
+                          selectedMenuIndex === idx 
+                            ? 'bg-emerald-50/20 border-emerald-500 ring-1 ring-emerald-500 text-zinc-950 font-bold' 
+                            : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
+                        }`}
+                      >
+                        <span className="truncate">{mItem.name}</span>
+                        <span className="font-mono text-emerald-800 shrink-0 select-all font-bold">₹{mItem.price}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-xs text-zinc-400 italic">No menu catalog recorded for this vendor.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Quantity increment counters */}
+              <div className="flex items-center justify-between p-2.5 bg-zinc-50 border border-zinc-200 rounded-xl">
+                <div>
+                  <span className="text-[10px] font-bold text-zinc-400 font-mono uppercase tracking-tight block">Quantity selection:</span>
+                  <p className="text-xs text-zinc-800 mt-0.5">Choose ticket counts</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setOrderQuantity(prev => Math.max(1, prev - 1))}
+                    className="w-8 h-8 rounded-lg bg-white border font-bold text-sm text-zinc-700 hover:bg-zinc-100 active:scale-90 transition-all flex items-center justify-center"
+                  >
+                    -
+                  </button>
+                  <span className="w-6 font-mono font-bold text-center text-xs">{orderQuantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setOrderQuantity(prev => Math.min(10, prev + 1))}
+                    className="w-8 h-8 rounded-lg bg-white border font-bold text-sm text-zinc-700 hover:bg-zinc-100 active:scale-90 transition-all flex items-center justify-center"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Price Calculation details summary */}
+              {(() => {
+                const selectedItem = selectedOrderStall.menu?.[selectedMenuIndex];
+                const itemPrice = selectedItem ? selectedItem.price : 50;
+                const grandTotal = itemPrice * orderQuantity;
+                
+                return (
+                  <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-150 space-y-2.5 text-xs text-zinc-700">
+                    <span className="text-[9px] font-bold font-mono text-zinc-400 uppercase tracking-widest block">ORDER EXCEL SUMMARY RECEIPT</span>
+                    <div className="flex justify-between items-center text-zinc-650">
+                      <span>Item: <strong className="text-zinc-800">{selectedItem?.name || 'Selected'}</strong></span>
+                      <span>₹{itemPrice} x {orderQuantity}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-zinc-600">
+                      <span>Biometric Convenience fee</span>
+                      <span className="text-emerald-700 font-bold">₹0.00 (FREE)</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-dashed border-zinc-200 pt-2 text-zinc-950 font-extrabold font-sans">
+                      <span className="text-zinc-900 uppercase">Grand Total (INR):</span>
+                      <span className="text-emerald-800 font-mono text-sm bg-emerald-50 px-2 py-0.5 rounded">₹{grandTotal}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Interactive checkouts action triggers */}
+            <div className="p-4 bg-zinc-50 border-t flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedOrderStall(null)}
+                className="flex-1 bg-white hover:bg-zinc-100 border border-zinc-300 font-bold text-xs p-2.5 rounded-xl transition-all text-zinc-800 uppercase tracking-widest text-center font-mono"
+              >
+                Cancel
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  const selectedItem = selectedOrderStall.menu?.[selectedMenuIndex];
+                  const itemPrice = selectedItem ? selectedItem.price : 50;
+                  const grandTotal = itemPrice * orderQuantity;
+
+                  // Update student level points dynamically by rewarding orders!
+                  const newNotif = {
+                    id: Math.random().toString(),
+                    type: 'success' as const,
+                    text: `🍔 Instacart receipt: Successfully placed order for ${orderQuantity}x ${selectedItem?.name || "item"} at ${selectedOrderStall.name}. Paid ₹${grandTotal}! Your digital receipt ticket holds code AEC-ST-${Math.floor(Math.random() * 900000 + 100000)}.`,
+                    timestamp: 'Just now',
+                    isRead: false,
+                    actionLabel: "View Order Receipt"
+                  };
+                  setNotifications(prev => [newNotif, ...prev]);
+                  setSelectedOrderStall(null);
+                  triggerToast(`🎉 Order Placed via QR! Paid ₹${grandTotal}. Got +150 XP! Check bulletins.`);
+                }}
+                className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs p-2.5 rounded-xl transition-all uppercase tracking-widest text-center font-mono shadow-md shadow-emerald-400/20"
+              >
+                Place Instacart Order →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

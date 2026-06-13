@@ -5,9 +5,17 @@ interface NavbarProps {
   onNavClick: (section: string) => void;
   activeSection: string;
   registrationCount: number;
+  unreadNotificationsCount?: number;
+  onOpenNotifications?: () => void;
 }
 
-export default function Navbar({ onNavClick, activeSection, registrationCount }: NavbarProps) {
+export default function Navbar({ 
+  onNavClick, 
+  activeSection, 
+  registrationCount,
+  unreadNotificationsCount = 0,
+  onOpenNotifications
+}: NavbarProps) {
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-zinc-100 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -83,7 +91,7 @@ export default function Navbar({ onNavClick, activeSection, registrationCount }:
           </nav>
 
           {/* Activity Metrics & Call to Actions */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {/* My Passes Badge */}
             {registrationCount > 0 && (
               <div 
@@ -95,6 +103,20 @@ export default function Navbar({ onNavClick, activeSection, registrationCount }:
                 <span>My Tickets ({registrationCount})</span>
               </div>
             )}
+
+            {/* Notification Bell Badge Trigger */}
+            <button
+              onClick={onOpenNotifications}
+              className="relative p-2.5 rounded-full hover:bg-zinc-100 text-zinc-700 transition-all active:scale-95 flex items-center justify-center border border-zinc-250/30 bg-zinc-50"
+              title="Open Campus Notifications Center"
+            >
+              <Bell className="w-4.5 h-4.5 text-zinc-800" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-rose-600 text-white font-mono text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                  {unreadNotificationsCount}
+                </span>
+              )}
+            </button>
 
             <button
               onClick={() => onNavClick('ai-guide')}
