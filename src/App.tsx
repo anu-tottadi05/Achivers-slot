@@ -37,6 +37,15 @@ import { CAMPUSES, EVENTS, STALLS as INITIAL_STALLS, INITIAL_ANNOUNCEMENTS, ALL_
 import { Campus, EventItem, Stall, LiveAnnouncement, ChatMessage, Registration } from './types';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import { 
+  saveRegistration, 
+  cancelRegistration, 
+  fetchAllRegistrations, 
+  saveStallToDb, 
+  fetchAllStalls, 
+  saveAnnouncementToDb, 
+  fetchAllAnnouncements 
+} from './firebase';
 
 export default function App() {
   // Global states
@@ -390,6 +399,54 @@ export default function App() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Synchronize state with Firebase Firestore on mount
+  useEffect(() => {
+    // 1. Hydrate registrations from Firestore
+    fetchAllRegistrations()
+      .then((regs) => {
+        if (regs && regs.length > 0) {
+          setRegistrations(regs);
+        }
+      })
+      .catch((err) => {
+        console.warn("Firestore loading bypassed or rules restricted for registrations:", err);
+      });
+
+    // 2. Hydrate stalls from Firestore or seed them if DB is empty
+    fetchAllStalls()
+      .then(async (dbStalls) => {
+        if (dbStalls && dbStalls.length > 0) {
+          setStalls(dbStalls);
+        } else {
+          // Empty DB: Seed initial stalls to network database so reviews/likes can happen across devices!
+          console.log("Seeding initial stalls to Firestore...");
+          for (const st of stalls) {
+            await saveStallToDb(st).catch((e) => console.error("Could not write seed stall:", e));
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Firestore loading bypassed or rules restricted for stalls:", err);
+      });
+
+    // 3. Hydrate announcements from Firestore or seed them if DB is empty
+    fetchAllAnnouncements()
+      .then(async (dbAnnouncements) => {
+        if (dbAnnouncements && dbAnnouncements.length > 0) {
+          setAnnouncements(dbAnnouncements);
+        } else {
+          // Empty DB: Seed initial announcements
+          console.log("Seeding initial announcements to Firestore...");
+          for (const ann of announcements) {
+            await saveAnnouncementToDb(ann).catch((e) => console.error("Could not write seed announcement:", e));
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Firestore loading bypassed or rules restricted for announcements:", err);
+      });
+  }, []);
+
   // Save state helpers
   useEffect(() => {
     localStorage.setItem('achievers_registrations', JSON.stringify(registrations));
@@ -559,6 +616,10 @@ export default function App() {
     };
 
     setRegistrations([newReg, ...registrations]);
+    saveRegistration(newReg)
+      .then(() => console.log("Pass persisted securely to Firestore Database."))
+      .catch((err) => console.error("Firestore persistence error for pass:", err));
+
     triggerToast(`🎉 Registration Success! Entry pass generated for ${eventItem.name}.`);
     
     // Reset forms
@@ -573,6 +634,10 @@ export default function App() {
   // Direct Ticket Cancel
   const handleCancelTicket = (eventId: string, email: string) => {
     setRegistrations(registrations.filter(r => !(r.eventId === eventId && r.userEmail === email)));
+    cancelRegistration(eventId, email)
+      .then(() => console.log("Pass cancelled and purged from Firestore Database."))
+      .catch((err) => console.error("Firestore cancel error for pass:", err));
+
     triggerToast("🎟️ Pass cancelled successfully.");
   };
 
@@ -580,7 +645,11 @@ export default function App() {
   const handleLikeStall = (stallId: string) => {
     const updated = stalls.map(st => {
       if (st.id === stallId) {
-        return { ...st, likes: st.likes + 1 };
+        const up = { ...st, likes: st.likes + 1 };
+        saveStallToDb(up)
+          .then(() => console.log("Stall like updated on Firestore."))
+          .catch(err => console.error("Firestore update error for like:", err));
+        return up;
       }
       return st;
     });
@@ -624,10 +693,14 @@ export default function App() {
 
     const updatedStalls = stalls.map(st => {
       if (st.id === feedbackStallId) {
-        return {
+        const up = {
           ...st,
           feedbacks: [newFeedback, ...st.feedbacks]
         };
+        saveStallToDb(up)
+          .then(() => console.log("Stall review submitted to Firestore."))
+          .catch(err => console.error("Firestore update error for review:", err));
+        return up;
       }
       return st;
     });
@@ -756,6 +829,10 @@ export default function App() {
     };
 
     setAnnouncements([newAnn, ...announcements]);
+    saveAnnouncementToDb(newAnn)
+      .then(() => console.log("New broadcast live synced with Firestore DB."))
+      .catch((err) => console.error("Firestore sync fail for broadcast:", err));
+
     setNewAnnText('');
     setNewAnnEventId('');
     triggerToast("📢 Live broadcast updated across all student devices.");
@@ -2942,10 +3019,14 @@ export default function App() {
 
                         const updatedStalls = stalls.map(st => {
                           if (st.id === currentStall.id) {
-                            return {
+                            const up = {
                               ...st,
                               feedbacks: [newFeedback, ...st.feedbacks]
                             };
+                            saveStallToDb(up)
+                              .then(() => console.log("Stall review submitted to Firestore (inline)."))
+                              .catch(err => console.error("Firestore update error for review (inline):", err));
+                            return up;
                           }
                           return st;
                         });

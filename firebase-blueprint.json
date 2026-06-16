@@ -1,0 +1,95 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Registration",
+      "description": "Student registration pass for a specific campus event.",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "eventName": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "userBranch": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventId", "eventName", "userName", "userEmail", "userPhone", "userBranch", "timestamp"]
+    },
+    "Stall": {
+      "title": "Stall",
+      "description": "Interactive student food & swag counter data.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "eventId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["Food Stalls", "Activity Stalls", "Merchandise Stalls", "Sponsor Stalls", "Technology Demo Stalls"] },
+        "description": { "type": "string" },
+        "images": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "location": { "type": "string" },
+        "feedbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "userName": { "type": "string" },
+              "rating": { "type": "integer" },
+              "review": { "type": "string" },
+              "timestamp": { "type": "string" },
+              "photoUrl": { "type": "string" }
+            }
+          }
+        },
+        "likes": { "type": "integer" },
+        "favorites": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "priceRange": { "type": "string" },
+        "timing": { "type": "string" },
+        "menu": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "price": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "required": ["id", "eventId", "name", "category", "description", "location", "likes"]
+    },
+    "LiveAnnouncement": {
+      "title": "LiveAnnouncement",
+      "description": "Live campus broadcast news item.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "text": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "warning", "success", "alert"] },
+        "eventId": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "text", "type"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Registry of student passes for events."
+    },
+    "/stalls/{stallId}": {
+      "schema": "Stall",
+      "description": "Registry of campus stalls."
+    },
+    "/announcements/{announcementId}": {
+      "schema": "LiveAnnouncement",
+      "description": "Broadcast channel stream."
+    }
+  }
+}
