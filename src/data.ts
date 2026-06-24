@@ -2,6 +2,7 @@ import { Campus, EventItem, Stall, LiveAnnouncement } from './types';
 
 export const CAMPUSES: Campus[] = [
   { id: 'viit', name: 'VIIT Campus (Vignan\'s Institute of Information Technology)', city: 'Visakhapatnam', shortName: 'VIIT' },
+  { id: 'view', name: 'VIEW Campus (Vignan\'s Institute of Engineering for Women)', city: 'Visakhapatnam', shortName: 'VIEW' },
   { id: 'vitp', name: 'VIT Pune Campus', city: 'Pune', shortName: 'VIT Pune' },
   { id: 'kite', name: 'KITE Engineering College', city: 'Mumbai', shortName: 'KITE' },
   { id: 'apex', name: 'Apex Group of Institutes', city: 'Bangalore', shortName: 'Apex' },

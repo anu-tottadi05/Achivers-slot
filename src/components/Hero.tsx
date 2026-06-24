@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Calendar, BookOpen, Sparkles, SlidersHorizontal, ChevronRight, LayoutGrid } from 'lucide-react';
 import { CAMPUSES, ALL_CATEGORIES } from '../data';
 import { Campus, EventItem } from '../types';
@@ -33,6 +33,11 @@ export default function Hero({
   onSelectEvent
 }: HeroProps) {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   // Extract unique cities from CAMPUSES
   const cities = Array.from(new Set(CAMPUSES.map(c => c.city)));
@@ -75,16 +80,31 @@ export default function Hero({
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-400" />
                   <input
                     type="text"
-                    value={searchQuery}
-                    onChange={(e) => onSearch(e.target.value)}
+                    value={localSearch}
+                    onChange={(e) => setLocalSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        onSearch(localSearch);
+                      }
+                    }}
                     placeholder="Search events, organizers, categories (e.g. hackathon, singing)..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all text-zinc-900"
+                    className="w-full pl-10 pr-12 py-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all text-zinc-900"
                   />
+                  <button
+                    onClick={() => onSearch(localSearch)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-zinc-500 hover:text-emerald-600 hover:bg-zinc-100 transition-colors"
+                    title="Click to search"
+                  >
+                    <Search className="w-4 h-4" />
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-1.5 justify-between">
                   <button
-                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    onClick={() => {
+                      setShowAdvancedFilters(!showAdvancedFilters);
+                      onSearch(localSearch);
+                    }}
                     className={`flex items-center space-x-1 px-3 py-2.5 rounded-xl border text-xs font-semibold tracking-wide transition-colors ${
                       showAdvancedFilters 
                         ? 'bg-zinc-900 text-white border-zinc-950' 

@@ -20,5 +20,15 @@ service cloud.firestore {
     match /registrations/{registrationId} {
       allow read, write: if true;
     }
+
+    // Users profiles collection rules
+    match /users/{uid} {
+      allow read, write: if true;
+    }
+
+    // SearchHistory collection rules
+    match /searchHistory/{searchId} {
+      allow read, write: if true;
+    }
   }
 }

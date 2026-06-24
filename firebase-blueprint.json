@@ -76,6 +76,38 @@
         "eventId": { "type": "string" }
       },
       "required": ["id", "timestamp", "text", "type"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Details about a registered user's profile.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "branch": { "type": "string" },
+        "department": { "type": "string" },
+        "rollNumber": { "type": "string" },
+        "campus": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "SearchHistoryItem": {
+      "title": "SearchHistoryItem",
+      "description": "An entry of a user's search history.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "query": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "uid", "query", "timestamp"]
     }
   },
   "firestore": {
@@ -90,6 +122,14 @@
     "/announcements/{announcementId}": {
       "schema": "LiveAnnouncement",
       "description": "Broadcast channel stream."
+    },
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "Registry of user profiles."
+    },
+    "/searchHistory/{searchId}": {
+      "schema": "SearchHistoryItem",
+      "description": "User search queries history."
     }
   }
 }

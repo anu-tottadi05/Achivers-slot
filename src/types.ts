@@ -82,3 +82,35 @@ export interface Registration {
   userBranch: string;
   timestamp: string;
 }
+
+export interface UserProfile {
+  uid: string;
+  name: string;
+  fullName: string;
+  email: string;
+  password?: string;
+  phone?: string;
+  phoneNumber?: string;
+  branch?: string;
+  department?: string;
+  academicDepartment?: string;
+  campus?: string;
+  hostCampusLocation?: string;
+  rollNumber?: string;
+  profilePhoto?: string;
+  createdAt?: string;
+  registrations?: string[];
+  savedEvents?: string[];
+  searchHistory?: string[];
+  likes?: string[];
+  reviews?: string[];
+}
+
+export interface SearchHistoryItem {
+  id: string;
+  uid: string;
+  email: string;
+  query: string;
+  timestamp: string;
+}
+

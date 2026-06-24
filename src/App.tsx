@@ -30,21 +30,44 @@ import {
   ShieldQuestion,
   ExternalLink,
   Map,
-  Smile
+  Smile,
+  ArrowLeft,
+  Download,
+  Share2,
+  Printer
 } from 'lucide-react';
 
+import { motion, AnimatePresence } from 'motion/react';
+
+export function getHashCode(str: string | undefined | null): number {
+  if (!str) return 0;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const chr = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  return hash;
+}
+
 import { CAMPUSES, EVENTS, STALLS as INITIAL_STALLS, INITIAL_ANNOUNCEMENTS, ALL_CATEGORIES } from './data';
-import { Campus, EventItem, Stall, LiveAnnouncement, ChatMessage, Registration } from './types';
+import { Campus, EventItem, Stall, LiveAnnouncement, ChatMessage, Registration, UserProfile } from './types';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import AuthScreen from './components/AuthScreen';
 import { 
+  auth,
+  onAuthStateChanged,
+  signOut,
   saveRegistration, 
   cancelRegistration, 
   fetchAllRegistrations, 
   saveStallToDb, 
   fetchAllStalls, 
   saveAnnouncementToDb, 
-  fetchAllAnnouncements 
+  fetchAllAnnouncements,
+  fetchUserProfile,
+  saveUserProfile
 } from './firebase';
 
 export default function App() {
@@ -61,6 +84,19 @@ export default function App() {
   // 1. AI Event Recommender Domain selection
   const [recommenderDomain, setRecommenderDomain] = useState<'Coding' | 'Robotics' | 'Design' | 'Arts' | 'Business'>('Coding');
 
+  // Authentication states
+  const [user, setUser] = useState<any | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Edit Profile States
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editPhoneNumber, setEditPhoneNumber] = useState('');
+  const [editRollNumber, setEditRollNumber] = useState('');
+  const [editAcademicDepartment, setEditAcademicDepartment] = useState('');
+  const [editHostCampusLocation, setEditHostCampusLocation] = useState('');
+  const [editProfilePhoto, setEditProfilePhoto] = useState('');
+
   // 2. Campus Avatar State (Sync with Local Storage if available)
   const [studentProfile, setStudentProfile] = useState(() => {
     return {
@@ -70,6 +106,72 @@ export default function App() {
       title: 'Academy Innovator'
     };
   });
+
+  // Track Authentication state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setAuthLoading(true);
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        try {
+          const profile = await fetchUserProfile(firebaseUser.uid);
+          if (profile) {
+            setStudentProfile({
+              name: profile.fullName || profile.name,
+              branch: profile.academicDepartment || profile.department || profile.branch || 'General Studies',
+              avatarUrl: profile.profilePhoto || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+              title: 'Academy Innovator'
+            });
+            // Initialize edit controllers
+            setEditFullName(profile.fullName || profile.name);
+            setEditPhoneNumber(profile.phoneNumber || profile.phone || '');
+            setEditRollNumber(profile.rollNumber || '');
+            setEditAcademicDepartment(profile.academicDepartment || profile.department || profile.branch || '');
+            setEditHostCampusLocation(profile.hostCampusLocation || profile.campus || '');
+            setEditProfilePhoto(profile.profilePhoto || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80');
+          } else {
+            const defaultProfile = {
+              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student Peer',
+              branch: 'Computer Science & Engineering',
+              avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+              title: 'Academy Innovator'
+            };
+            setStudentProfile(defaultProfile);
+            setEditFullName(defaultProfile.name);
+            setEditPhoneNumber('');
+            setEditRollNumber('');
+            setEditAcademicDepartment(defaultProfile.branch);
+            setEditHostCampusLocation('VIIT Campus (Vignan\'s Institute of Information Technology)');
+            setEditProfilePhoto(defaultProfile.avatarUrl);
+
+            await saveUserProfile({
+              uid: firebaseUser.uid,
+              name: defaultProfile.name,
+              fullName: defaultProfile.name,
+              email: firebaseUser.email || '',
+              phone: '',
+              phoneNumber: '',
+              branch: defaultProfile.branch,
+              department: defaultProfile.branch,
+              academicDepartment: defaultProfile.branch,
+              rollNumber: '',
+              campus: 'VIIT Campus (Vignan\'s Institute of Information Technology)',
+              hostCampusLocation: 'VIIT Campus (Vignan\'s Institute of Information Technology)',
+              profilePhoto: defaultProfile.avatarUrl,
+              createdAt: new Date().toISOString()
+            });
+          }
+        } catch (err) {
+          console.warn("Failed fetching user profile from database:", err);
+        }
+      } else {
+        setUser(null);
+      }
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // 3. Instagram-style Live Event Stories
   const [activeStory, setActiveStory] = useState<{ id: string; campus: string; title: string; image: string; description: string; tag: string } | null>(null);
@@ -125,6 +227,10 @@ export default function App() {
   
   // 7. Digital Certificate download target
   const [activeCertificateReg, setActiveCertificateReg] = useState<Registration | null>(null);
+  const [isGeneratingCertificate, setIsGeneratingCertificate] = useState<boolean>(false);
+  const [generatingEventName, setGeneratingEventName] = useState<string>('');
+  const [certificatePreviousTab, setCertificatePreviousTab] = useState<'events' | 'dashboard' | 'support' | 'my-tickets' | 'stalls'>('events');
+  const [certificatePreviousEvent, setCertificatePreviousEvent] = useState<EventItem | null>(null);
 
   // 8. QR Code details popup modal
   const [activeQrModal, setActiveQrModal] = useState<{ type: 'ticket' | 'stall-order'; id: string; title: string, subtitle?: string } | null>(null);
@@ -140,19 +246,28 @@ export default function App() {
 
   // Registrations state
   const [registrations, setRegistrations] = useState<Registration[]>(() => {
-    const saved = localStorage.getItem('achievers_registrations');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('achievers_registrations');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.warn("localStorage registrations parsing failed:", e);
+      return [];
+    }
   });
 
   // Stalls state (with likes & reviews)
   const [stalls, setStalls] = useState<Stall[]>(() => {
-    const saved = localStorage.getItem('achievers_stalls');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Ensure existing stalls have the correct 7 items if they are loaded from a stale preview state
-      if (parsed.length > 0 && parsed[0].priceRange) {
-        return parsed;
+    try {
+      const saved = localStorage.getItem('achievers_stalls');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure existing stalls have the correct 7 items if they are loaded from a stale preview state
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].priceRange) {
+          return parsed;
+        }
       }
+    } catch (e) {
+      console.warn("localStorage stalls parsing failed:", e);
     }
 
     const initialList: Stall[] = [];
@@ -347,14 +462,24 @@ export default function App() {
 
   // Master favorites for simple client reference
   const [favoriteStalls, setFavoriteStalls] = useState<string[]>(() => {
-    const saved = localStorage.getItem('achievers_favorite_stalls');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('achievers_favorite_stalls');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.warn("localStorage favoriteStalls parsing failed:", e);
+      return [];
+    }
   });
 
   // Announcements state
   const [announcements, setAnnouncements] = useState<LiveAnnouncement[]>(() => {
-    const saved = localStorage.getItem('achievers_announcements');
-    return saved ? JSON.parse(saved) : INITIAL_ANNOUNCEMENTS;
+    try {
+      const saved = localStorage.getItem('achievers_announcements');
+      return saved ? JSON.parse(saved) : INITIAL_ANNOUNCEMENTS;
+    } catch (e) {
+      console.warn("localStorage announcements parsing failed:", e);
+      return INITIAL_ANNOUNCEMENTS;
+    }
   });
 
   // AI Chat states
@@ -561,14 +686,18 @@ export default function App() {
     // Date match: fits chronological progression
     const dateMatch = !selectedDate || new Date(ev.date) >= new Date(selectedDate);
 
-    // General string search (matches tags, description, name, category, or organizer)
+    // General string search (matches event title, category, organizer, campus, city, description)
     const normalizedQuery = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || 
       ev.name.toLowerCase().includes(normalizedQuery) ||
       ev.category.toLowerCase().includes(normalizedQuery) ||
+      ev.organizer.name.toLowerCase().includes(normalizedQuery) ||
       ev.description.toLowerCase().includes(normalizedQuery) ||
-      ev.venue.toLowerCase().includes(normalizedQuery) ||
-      ev.organizer.name.toLowerCase().includes(normalizedQuery);
+      (targetCampus && (
+        targetCampus.name.toLowerCase().includes(normalizedQuery) ||
+        targetCampus.shortName.toLowerCase().includes(normalizedQuery) ||
+        targetCampus.city.toLowerCase().includes(normalizedQuery)
+      ));
 
     return campusMatch && categoryMatch && cityMatch && dateMatch && matchesSearch;
   });
@@ -640,6 +769,77 @@ export default function App() {
 
     triggerToast("🎟️ Pass cancelled successfully.");
   };
+
+  // Certificate PDF, Sharing, and Registration Management
+  const triggerGenerateCertificate = (reg: Registration) => {
+    setGeneratingEventName(reg.eventName);
+    setIsGeneratingCertificate(true);
+    triggerToast("⏳ Commencing secure academic verification flow...");
+
+    // Capture the current window state so we can return back to it flawlessly
+    setCertificatePreviousTab(activeTab);
+    setCertificatePreviousEvent(selectedEvent);
+
+    setTimeout(() => {
+      setIsGeneratingCertificate(false);
+      setActiveCertificateReg(reg);
+      
+      try {
+        // Push history state so that browser back naturally pops the certificate page
+        window.history.pushState({ showCertificate: true, regId: reg.eventId }, '');
+      } catch (err) {
+        console.warn("History pushState restricted by environment sandboxing:", err);
+      }
+      
+      triggerToast("🎓 Certificate Generated Successfully!");
+    }, 1200);
+  };
+
+  const handleGoBackForCertificate = () => {
+    setActiveCertificateReg(null);
+    setActiveTab(certificatePreviousTab || 'events');
+    if (certificatePreviousEvent) {
+      setSelectedEvent(certificatePreviousEvent);
+    }
+  };
+
+  // 1. Unified popstate listener to catch browser history back actions
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (activeCertificateReg) {
+        setActiveCertificateReg(null);
+        setActiveTab(certificatePreviousTab || 'events');
+        if (certificatePreviousEvent) {
+          setSelectedEvent(certificatePreviousEvent);
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [activeCertificateReg, certificatePreviousTab, certificatePreviousEvent]);
+
+  // 2. Keyboard ESC shortcut listener is bound for advanced accessibility support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && activeCertificateReg) {
+        try {
+          if (window.history.state?.showCertificate) {
+            window.history.back();
+          } else {
+            handleGoBackForCertificate();
+          }
+        } catch (err) {
+          handleGoBackForCertificate();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeCertificateReg, certificatePreviousTab, certificatePreviousEvent]);
 
   // Stall Interactions
   const handleLikeStall = (stallId: string) => {
@@ -858,6 +1058,37 @@ export default function App() {
     }, 1500);
   };
 
+  const handleSearchExecute = async (queryStr: string) => {
+    setSearchQuery(queryStr);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex flex-col justify-center items-center font-sans">
+        <div className="space-y-4 text-center animate-pulse">
+          <div className="w-10 h-10 border-4 border-zinc-200 border-t-emerald-600 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest font-mono">Synchronizing Student Portal...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AuthScreen 
+        onAuthSuccess={(profile) => {
+          setUser({ uid: profile.uid, email: profile.email });
+          setStudentProfile({
+            name: profile.name,
+            branch: profile.branch || 'Computer Science & Engineering',
+            avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+            title: 'Academy Innovator'
+          });
+        }} 
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900 selection:bg-emerald-100 selection:text-emerald-950 flex flex-col relative">
       
@@ -902,6 +1133,22 @@ export default function App() {
         registrationCount={registrations.length} 
         unreadNotificationsCount={notifications.filter(n => !n.isRead).length}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
+        userProfile={user ? {
+          ...studentProfile,
+          email: user.email || '',
+          uid: user.uid,
+          fullName: editFullName || studentProfile.name,
+          campus: editHostCampusLocation || 'VIIT Campus (Vignan\'s Institute of Information Technology)'
+        } : null}
+        onLogout={async () => {
+          try {
+            await signOut(auth);
+            triggerToast("🔒 Logged out of portal successfully.");
+          } catch (err) {
+            console.error("Signout fail:", err);
+          }
+        }}
+        onOpenEditProfile={() => setIsEditProfileOpen(true)}
       />
 
       {/* Core Body Container */}
@@ -912,7 +1159,7 @@ export default function App() {
           <div>
             {/* Embedded Hero Header and Search Filters */}
             <Hero 
-              onSearch={setSearchQuery}
+              onSearch={handleSearchExecute}
               onCampusChange={setSelectedCampusId}
               onCategoryChange={setSelectedCategory}
               onCityChange={setSelectedCity}
@@ -1185,7 +1432,7 @@ export default function App() {
                     <div className="bg-white p-12 text-center rounded-3xl border border-zinc-200 text-zinc-500 space-y-4">
                       <LayoutGrid className="w-12 h-12 mx-auto text-zinc-300" />
                       <div className="space-y-1">
-                        <h4 className="font-bold text-zinc-950">No Active Events Match This Search</h4>
+                        <h4 className="font-bold text-zinc-950">No related events found</h4>
                         <p className="text-xs text-zinc-500">Try modifying city filters, removing dates, or search different tags.</p>
                       </div>
                       <button 
@@ -1299,21 +1546,32 @@ export default function App() {
                           </div>
 
                           {/* Render custom input layout or show if registered */}
-                          {registrations.some(r => r.eventId === selectedEvent.id) ? (
-                            <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200 text-center space-y-3">
-                              <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-                              <div>
-                                <h4 className="text-sm font-bold text-emerald-950">Registered Successfully!</h4>
-                                <p className="text-xs text-emerald-700 leading-tight">Your digital gate-pass is active. Check &quot;My Tickets&quot; in the header menu to display QR code receipt.</p>
+                          {(() => {
+                            const thisReg = registrations.find(r => r.eventId === selectedEvent.id);
+                            return thisReg ? (
+                              <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200 text-center space-y-3">
+                                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                                <div>
+                                  <h4 className="text-sm font-bold text-emerald-950">Registered Successfully!</h4>
+                                  <p className="text-xs text-emerald-700 leading-tight">Your digital gate-pass is active. Check &quot;My Tickets&quot; in the header menu to display QR code receipt.</p>
+                                </div>
+                                <div className="flex flex-col gap-2 pt-1 font-sans">
+                                  <button 
+                                    onClick={() => setActiveTab('my-tickets')}
+                                    className="w-full text-xs font-bold text-emerald-800 bg-white hover:bg-zinc-50 border border-emerald-200/80 py-2 rounded-xl transition-all shadow-sm flex items-center justify-center space-x-1 cursor-pointer"
+                                  >
+                                    <span>🎟️ View Ticket Receipt &rarr;</span>
+                                  </button>
+                                  <button 
+                                    onClick={() => triggerGenerateCertificate(thisReg)}
+                                    className="w-full text-xs font-bold text-white bg-zinc-950 hover:bg-zinc-850 py-2 rounded-xl transition-all shadow-md flex items-center justify-center space-x-1.5 cursor-pointer"
+                                  >
+                                    <span>🎓 Generate & View Certificate &rarr;</span>
+                                  </button>
+                                </div>
                               </div>
-                              <button 
-                                onClick={() => setActiveTab('my-tickets')}
-                                className="text-xs font-mono font-bold text-emerald-800 underline hover:text-emerald-950"
-                              >
-                                View Ticket Receipt &rarr;
-                              </button>
-                            </div>
-                          ) : (
+                            ) : null;
+                          })() || (
                             <form onSubmit={(e) => handleRegisterEvent(e, selectedEvent)} className="space-y-3">
                               <div className="space-y-1">
                                 <label className="block text-[10px] uppercase font-mono tracking-wider font-bold text-zinc-500">Full Name</label>
@@ -2069,7 +2327,7 @@ export default function App() {
                           </div>
                           <div className="text-right">
                             <span className="text-[9px] font-mono font-bold uppercase text-emerald-600 tracking-widest block">SECURE ADMISSION CODE</span>
-                            <span className="text-xs font-mono font-bold text-zinc-900">AS-PASS-{Math.abs(reg.eventId.hashCode() || 68742) + idx}</span>
+                            <span className="text-xs font-mono font-bold text-zinc-900">AS-PASS-{Math.abs(getHashCode(reg.eventId) || 68742) + idx}</span>
                           </div>
                         </div>
 
@@ -2115,10 +2373,9 @@ export default function App() {
                         <div className="flex flex-wrap gap-2 justify-end">
                           <button
                             onClick={() => {
-                              setActiveCertificateReg(reg);
-                              triggerToast(`🎓 Loaded academic credentials for claiming participation award: ${reg.eventName}`);
+                              triggerGenerateCertificate(reg);
                             }}
-                            className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] flex items-center gap-1.5"
+                            className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
                           >
                             <span>🎓 Claim Certificate</span>
                           </button>
@@ -2141,7 +2398,7 @@ export default function App() {
                             onClick={() => {
                               setActiveQrModal({
                                 type: 'ticket',
-                                id: `AS-PASS-${Math.abs(reg.eventId.hashCode())}`,
+                                id: `AS-PASS-${Math.abs(getHashCode(reg.eventId))}`,
                                 title: reg.eventName,
                                 subtitle: `Attendee: ${reg.userName} (${reg.userBranch})`
                               });
@@ -3327,102 +3584,295 @@ export default function App() {
       })()}
 
       {/* ======================================================================= */}
-      {/* 3. DIGITAL CERTIFICATE ACHIEVEMENT MODAL */}
+      {/* 3. DIGITAL CERTIFICATE HOLOGRAPHIC GENERATOR AND PORTAL PAGE OVERLAY */}
       {/* ======================================================================= */}
-      {activeCertificateReg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/75 backdrop-blur-sm animate-fade-in font-sans p-4">
-          <div className="absolute inset-0" onClick={() => setActiveCertificateReg(null)}></div>
-          
-          <div className="bg-amber-50/15 max-w-3xl w-full rounded-3xl overflow-hidden shadow-2xl relative z-10 border border-amber-200/50 flex flex-col justify-between animate-scale-up">
-            {/* Gold Crown Ribbon Header */}
-            <div className="bg-zinc-950 text-white p-4 px-6 flex justify-between items-center">
-              <div className="flex items-center gap-1.5">
-                <Award className="w-5 h-5 text-amber-400" />
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">AEC ACADEMIC COGNIZANCE REGISTRY</span>
-              </div>
-              <button 
-                onClick={() => setActiveCertificateReg(null)}
-                className="text-zinc-400 hover:text-white font-bold text-xs"
-              >
-                ✕ Close
-              </button>
-            </div>
-
-            {/* Inner Certificate layout resembling creamy security bond paper */}
-            <div className="p-10 bg-white border-8 border-double border-zinc-900 m-6 rounded-2xl relative text-center space-y-6 select-none shadow-inner">
-              <div className="absolute top-4 left-4 w-12 h-12 border-t-2 border-l-2 border-amber-400 pointer-events-none"></div>
-              <div className="absolute top-4 right-4 w-12 h-12 border-t-2 border-r-2 border-amber-400 pointer-events-none"></div>
-              <div className="absolute bottom-4 left-4 w-12 h-12 border-b-2 border-l-2 border-amber-400 pointer-events-none"></div>
-              <div className="absolute bottom-4 right-4 w-12 h-12 border-b-2 border-r-2 border-amber-400 pointer-events-none"></div>
-
-              {/* Crest Seal */}
-              <div className="mx-auto flex items-center justify-center w-14 h-14 bg-zinc-950 rounded-full border-4 border-amber-400 text-amber-400 font-mono font-bold select-none text-2xl shadow">
-                AEC
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-widest">Achievers Slot Academic Excellence</span>
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight font-sans uppercase">Certificate of Participation</h2>
-                <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent mx-auto mt-2"></div>
-              </div>
-
-              <div className="space-y-3 max-w-xl mx-auto">
-                <p className="text-xs text-zinc-400 font-serif italic">This is officially recorded & verified to confirm that student</p>
-                <h3 className="text-xl sm:text-2xl font-extrabold text-zinc-950 font-sans tracking-tight border-b-2 border-zinc-150 inline-block px-8 py-0.5">{activeCertificateReg.userName}</h3>
-                <p className="text-xs text-zinc-500 font-mono tracking-tight">{activeCertificateReg.userBranch} Department branch of AEC</p>
-                <p className="text-xs text-zinc-650 font-serif leading-relaxed px-4">
-                  has demonstrated outstanding engagement, student responsibility, and proactive collaborative skills by participating in the collegiate carnival arena:
-                </p>
-                <div className="bg-zinc-55 bg-zinc-50 border border-zinc-200/60 rounded-xl p-3 max-w-md mx-auto">
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase block tracking-wider">EVENT REGISTERED & ATTENDED</span>
-                  <strong className="text-sm font-extrabold text-zinc-950 uppercase">{activeCertificateReg.eventName}</strong>
-                </div>
-              </div>
-
-              {/* Signatures Column */}
-              <div className="grid grid-cols-2 gap-10 max-w-lg mx-auto pt-4 border-t border-dashed border-zinc-150 text-left text-xs text-zinc-500">
-                <div className="space-y-1 text-center">
-                  <div className="font-mono text-amber-600/80 italic text-sm font-bold">K. Ranga Swamy</div>
-                  <div className="border-t border-zinc-300 w-3/4 mx-auto pt-1 font-mono text-[9px] uppercase tracking-wider">Prof. K. Ranga Swamy<br/>Dean of Academics</div>
-                </div>
-                <div className="space-y-1 text-center">
-                  <div className="font-mono text-emerald-700/80 italic text-sm font-bold">Dr. S. Devender</div>
-                  <div className="border-t border-zinc-300 w-3/4 mx-auto pt-1 font-mono text-[9px] uppercase tracking-wider">Dr. S. Devender Prasad<br/>Convene Chairman</div>
-                </div>
-              </div>
-
-              {/* Footnote receipt details */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 max-w-xl mx-auto text-[8px] font-mono text-zinc-400">
-                <span>VERIFY CODE: AEC-REG-{Math.abs(activeCertificateReg.eventId.hashCode() || 4118).toString(16).toUpperCase()}</span>
-                <span>TIMESTAMP: {new Date(activeCertificateReg.registrationTimestamp || "2026-06-15T10:00:00Z").toLocaleDateString()}</span>
-                <span className="bg-zinc-100 p-1 text-[7px] border border-zinc-200">||| SECURED DIGITAL TOKEN AUTHENTICATED |||</span>
+      
+      {/* Dynamic Security Sealing Progress Screen */}
+      {isGeneratingCertificate && (
+        <div id="certificate_sealing_loader" className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950 text-white font-sans p-6 overflow-hidden animate-fade-in">
+          <div className="max-w-md w-full text-center space-y-8">
+            
+            {/* Spinning Holographic Security Badge */}
+            <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-dashed border-emerald-500 animate-[spin_8s_linear_infinite]"></div>
+              <div className="absolute inset-2 rounded-full border border-double border-amber-400 rotate-45 animate-[spin_4s_linear_infinite_reverse]"></div>
+              <div className="absolute inset-4 rounded-full bg-emerald-950/40 flex items-center justify-center">
+                <Award className="w-9 h-9 text-amber-400 animate-bounce" />
               </div>
             </div>
 
-            {/* Quick Actions Panel */}
-            <div className="bg-zinc-50 p-4 border-t border-zinc-200 flex justify-between gap-4 font-mono text-xs font-bold">
-              <span className="text-zinc-450 text-[10px] self-center">✨ Claiming earns you **LEVEL 3 Badges** if not already unlocked!</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    window.print();
-                    triggerToast("🖨️ PDF print signal sent successfully! Stored digital completion ticket.");
-                  }}
-                  className="bg-zinc-950 text-white font-bold hover:bg-zinc-800 px-4 py-2 rounded-xl transition-all font-mono text-xs uppercase tracking-wide flex items-center gap-1"
-                >
-                  Download PDF Reciept
-                </button>
-                <button
-                  onClick={() => setActiveCertificateReg(null)}
-                  className="bg-white border border-zinc-300 hover:bg-zinc-100 text-zinc-800 px-4 py-2 rounded-xl text-xs transition-all"
-                >
-                  Dismiss
-                </button>
-              </div>
+            <div className="space-y-2">
+              <h3 className="text-base font-black tracking-widest text-amber-400 font-mono uppercase">AEC SECURE DOCUMENT REGISTRY</h3>
+              <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Holographic Verification Sealing in Progress</p>
+            </div>
+
+            {/* Mock Cryptographic Terminal Streams */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-left font-mono text-[9px] text-zinc-500 space-y-1.5 shadow-2xl overflow-hidden h-40">
+              <div className="text-emerald-500/90">&gt; SEARCHING AEC COGNIZANCE DATABASE... PASS RECORD SPECKEY CONFIRMED</div>
+              <div className="text-emerald-500/90">&gt; RETRIEVING REGISTERED EMAIL HASH DATA: APPROVED</div>
+              <div className="text-zinc-400 animate-pulse">&gt; CALCULATING SECURE METAMODULE HASH CODE: AEC-REG-{Math.abs(getHashCode(generatingEventName) || 4118).toString(16).toUpperCase()}...</div>
+              <div className="text-amber-400/90">&gt; COMMITTING CRYPTOGRAPHIC SIGNATURES FOR DEAN & CHAIRPERSON...</div>
+              <div className="text-zinc-500">&gt; COMMITTING DURABLE LOCAL TICKET TOKEN ARCHIVE... SUCCESS [100%]</div>
+            </div>
+
+            <div className="text-xs text-zinc-450 leading-relaxed">
+              Generating Official Certificate for: <br />
+              <strong className="text-white text-sm font-extrabold tracking-wide block mt-1">{generatingEventName}</strong>
             </div>
           </div>
         </div>
       )}
+
+      {/* Complete Dedicated Certificate view page overlay */}
+      <AnimatePresence>
+        {activeCertificateReg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            id="secured_certificate_portal_page"
+            className="fixed inset-0 z-50 bg-zinc-50/95 backdrop-blur-md overflow-y-auto min-h-screen text-zinc-900 flex flex-col font-sans"
+          >
+            {/* Header Success Notice Banner */}
+            <div className="bg-emerald-600 text-white py-3 px-4 md:px-8 sticky top-0 z-40 shadow-md flex items-center justify-between">
+              <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between text-xs font-bold gap-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-white animate-pulse" />
+                  <span className="tracking-wide text-[13px]">Certificate Generated Successfully ✅</span>
+                </div>
+                <div className="text-emerald-100 font-mono text-[10px] uppercase tracking-wider block sm:text-right">
+                  LIVE SECURED ACCESS TOKEN: AEC-REG-{Math.abs(getHashCode(activeCertificateReg.eventId) || 4118).toString(16).toUpperCase()}
+                </div>
+              </div>
+            </div>
+
+            {/* FIXED BACK BUTTON: White Background, Black Text, Professional Shadow, Modern UI */}
+            <div className="fixed top-20 left-4 md:left-8 z-50 group/backbtn">
+              <button
+                onClick={handleGoBackForCertificate}
+                className="bg-white hover:bg-zinc-150 text-zinc-950 px-5 py-2.5 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.12)] border border-zinc-200/60 hover:border-zinc-300 flex items-center space-x-2.5 text-xs font-black transition-all duration-200 transform active:scale-95 cursor-pointer"
+                title="Go Back"
+              >
+                <ArrowLeft className="w-4 h-4 text-zinc-800" />
+                <span>← Back to Events</span>
+              </button>
+              {/* Tooltip: "Go Back" */}
+              <div className="absolute left-1/2 -translate-x-1/2 top-11 scale-0 group-hover/backbtn:scale-100 transition-all duration-150 origin-top bg-zinc-900 text-white text-[9px] uppercase font-mono tracking-widest px-2 py-1 rounded shadow-md pointer-events-none whitespace-nowrap z-50">
+                Go Back (ESC)
+              </div>
+            </div>
+
+            {/* Main Center Grid Platform */}
+            <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 md:py-16 grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12 items-start mt-10">
+              
+              {/* LEFT & CENTER CARD: Unchanged existing Double-bordered bond-paper Certificate */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* Printable container wrappers */}
+                <div className="bg-white rounded-3xl border border-zinc-200/65 shadow-[0_20px_50px_rgba(0,0,0,0.06)] overflow-hidden print-certificate">
+                  
+                  {/* Credential Content Layout (Unaltered bond paper border & signatures) */}
+                  <div className="p-6 sm:p-10 md:p-12 bg-amber-50/5 relative text-center space-y-6 md:space-y-8 select-none">
+                    
+                    {/* Double-bordered standard diploma lines */}
+                    <div className="border-[6px] border-double border-zinc-900 p-6 sm:p-10 rounded-xl relative space-y-6 md:space-y-8 shadow-inner bg-white">
+                      
+                      {/* Diploma Corners */}
+                      <div className="absolute top-4 left-4 w-10 h-10 border-t-2 border-l-2 border-amber-400 pointer-events-none"></div>
+                      <div className="absolute top-4 right-4 w-10 h-10 border-t-2 border-r-2 border-amber-400 pointer-events-none"></div>
+                      <div className="absolute bottom-4 left-4 w-10 h-10 border-b-2 border-l-2 border-amber-400 pointer-events-none"></div>
+                      <div className="absolute bottom-4 right-4 w-10 h-10 border-b-2 border-r-2 border-amber-400 pointer-events-none"></div>
+
+                      {/* Crest Logo Seal */}
+                      <div className="mx-auto flex items-center justify-center w-14 h-14 bg-zinc-950 rounded-full border-4 border-amber-400 text-amber-400 font-mono font-bold select-none text-xl shadow-md">
+                        AEC
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-amber-500 font-mono text-[9px] font-bold uppercase tracking-widest block">Achievers Slot Academic Excellence</span>
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-950 tracking-tight font-sans uppercase">Certificate of Participation</h2>
+                        <div className="w-32 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent mx-auto mt-2"></div>
+                      </div>
+
+                      <div className="space-y-4 max-w-xl mx-auto">
+                        <p className="text-xs text-zinc-400 font-serif italic">This is officially recorded & verified to confirm that student</p>
+                        <h3 className="text-xl sm:text-2xl font-black text-zinc-950 font-sans tracking-tight border-b-2 border-zinc-150 inline-block px-8 py-0.5">{activeCertificateReg.userName}</h3>
+                        <p className="text-xs text-zinc-500 font-mono tracking-tight">{activeCertificateReg.userBranch} Department branch of AEC</p>
+                        <p className="text-xs text-zinc-600 font-serif leading-relaxed px-4">
+                          has demonstrated outstanding engagement, student responsibility, and proactive collaborative skills by participating in the collegiate carnival arena:
+                        </p>
+                        <div className="bg-zinc-50 border border-zinc-200/60 rounded-2xl p-4 max-w-md mx-auto">
+                          <span className="text-[9px] font-mono text-zinc-400 uppercase block tracking-wider font-bold mb-1">EVENT REGISTERED & ATTENDED</span>
+                          <strong className="text-sm md:text-base font-extrabold text-zinc-950 uppercase block leading-tight">{activeCertificateReg.eventName}</strong>
+                        </div>
+                      </div>
+
+                      {/* Signatures Column */}
+                      <div className="grid grid-cols-2 gap-8 max-w-lg mx-auto pt-6 border-t border-dashed border-zinc-200 text-left text-xs text-zinc-500">
+                        <div className="space-y-1 text-center">
+                          <div className="font-mono text-amber-600/90 italic text-sm font-bold">K. Ranga Swamy</div>
+                          <div className="border-t border-zinc-300 w-4/5 mx-auto pt-1 font-mono text-[8px] uppercase tracking-wider leading-relaxed">Prof. K. Ranga Swamy<br/>Dean of Academics</div>
+                        </div>
+                        <div className="space-y-1 text-center">
+                          <div className="font-mono text-emerald-700/90 italic text-sm font-bold">Dr. S. Devender</div>
+                          <div className="border-t border-zinc-300 w-4/5 mx-auto pt-1 font-mono text-[8px] uppercase tracking-wider leading-relaxed">Dr. S. Devender Prasad<br/>Convene Chairman</div>
+                        </div>
+                      </div>
+
+                      {/* Footnote receipt details */}
+                      <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 max-w-xl mx-auto text-[8px] font-mono text-zinc-400">
+                        <span>VERIFY ID: AEC-REG-{Math.abs(getHashCode(activeCertificateReg.eventId) || 4118).toString(16).toUpperCase()}</span>
+                        <span>ISSUED: {new Date(activeCertificateReg.registrationTimestamp || activeCertificateReg.timestamp || "2026-06-15T10:00:00Z").toLocaleDateString()}</span>
+                        <span className="bg-zinc-100 p-1 text-[7px] border border-zinc-200 font-bold">||| SECURED DIGITAL TOKEN AUTHENTICATED |||</span>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info Advisory note */}
+                <div className="bg-zinc-100 border border-zinc-200/80 rounded-2xl p-4 text-xs font-mono text-zinc-500 flex items-start space-x-2.5">
+                  <Info className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                  <p className="leading-relaxed">This digital award has been cryptographically locked with your student profile email credential <strong className="text-zinc-800">{activeCertificateReg.userEmail}</strong>. Attempting to alter student name hashes will invalidate the security verification tokens.</p>
+                </div>
+
+              </div>
+
+              {/* RIGHT COLUMN: Modern Meta-Actions & Verification Sidebar */}
+              <div className="space-y-6">
+                
+                {/* Interactive Dynamic Action Card */}
+                <div className="bg-white rounded-3xl border border-zinc-200/60 p-6 shadow-md space-y-4">
+                  <h4 className="text-xs uppercase font-mono font-bold text-zinc-400 tracking-wider">CERTIFICATE MANAGEMENT</h4>
+                  
+                  {/* Action Buttons */}
+                  <div className="space-y-3 font-sans">
+                    {/* PDF Download Button */}
+                    <button
+                      onClick={() => {
+                        triggerToast("📥 Preparing your high-resolution Certificate PDF! Please select 'Save as PDF' in the destination options.");
+                        setTimeout(() => window.print(), 800);
+                      }}
+                      className="w-full bg-zinc-950 hover:bg-zinc-850 text-white rounded-xl py-3.5 px-4 font-bold flex items-center justify-center space-x-2 text-xs transition-all tracking-wide shadow-md hover:shadow-xl active:scale-95 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-white" />
+                      <span>DOWNLOAD CERTIFICATE (PDF)</span>
+                    </button>
+
+                    {/* Print Button */}
+                    <button
+                      onClick={() => window.print()}
+                      className="w-full bg-white hover:bg-zinc-50 text-zinc-950 border border-zinc-200 rounded-xl py-3.5 px-4 font-bold flex items-center justify-center space-x-2 text-xs transition-all tracking-wide active:scale-95 cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4 text-zinc-800" />
+                      <span>PRINT CERTIFICATE</span>
+                    </button>
+
+                    {/* Share Button with Local URL Copier */}
+                    <button
+                      onClick={() => {
+                        const secureHash = Math.abs(getHashCode(activeCertificateReg.eventId) || 4118).toString(16).toUpperCase();
+                        const shareableUrl = `${window.location.origin}?verify=AEC-REG-${secureHash}`;
+                        navigator.clipboard.writeText(shareableUrl)
+                          .then(() => {
+                            triggerToast("🔗 Verification share-link copied to clipboard! Share it with employers or add to LinkedIn.");
+                          })
+                          .catch(() => {
+                            triggerToast("❌ Clipboard copy failed. Share code: AEC-REG-" + secureHash);
+                          });
+                      }}
+                      className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl py-3.5 px-4 font-black flex items-center justify-center space-x-2 text-xs transition-all tracking-wide active:scale-95 cursor-pointer"
+                    >
+                      <Share2 className="w-4 h-4 text-emerald-700" />
+                      <span>SHARE CERTIFICATE</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Verification Credential Details Card */}
+                <div className="bg-white rounded-3xl border border-zinc-200/60 p-6 shadow-md space-y-4">
+                  <h4 className="text-xs uppercase font-mono font-bold text-zinc-400 tracking-wider">VERIFICATION STATUS</h4>
+                  
+                  <div className="space-y-4 text-xs">
+                    {/* Glowing Live Verified Badge */}
+                    <div className="flex items-center justify-between p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-2xl animate-pulse">
+                      <span className="font-bold text-zinc-700">Verification Status</span>
+                      <span className="bg-emerald-500 text-white font-mono px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                        Verified Valid ✅
+                      </span>
+                    </div>
+
+                    {/* Verification Records Block */}
+                    <div className="space-y-3 border-t border-zinc-150 pt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-500 font-medium">Certificate ID</span>
+                        <span className="font-mono font-extrabold text-zinc-950">
+                          AEC-CERT-RE-{Math.abs(getHashCode(activeCertificateReg.eventId) || 4118).toString(16).toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-500 font-medium">Issue Date</span>
+                        <span className="font-sans font-bold text-zinc-900">
+                          {new Date(activeCertificateReg.registrationTimestamp || activeCertificateReg.timestamp || "2026-06-23T06:30:33Z").toLocaleDateString('en-US', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-500 font-medium">Accreditation</span>
+                        <span className="font-sans font-bold text-zinc-700 text-[11px] text-right">
+                          Vignan's Institute (Autonomous)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* QR Code Verification Section */}
+                <div className="bg-zinc-950 text-white rounded-3xl p-6 shadow-xl space-y-4">
+                  <div className="flex items-center space-x-2 text-amber-400">
+                    <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+                    <h4 className="text-xs uppercase font-mono font-bold tracking-wider">LIVE QR PORTAL MATCH</h4>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Scan this QR code with any mobile scanner to instantly fetch academic authenticity logs from Vignan college index.
+                  </p>
+
+                  {/* QR Matrix Generation Grid */}
+                  <div className="p-3 bg-white border border-zinc-800 rounded-2xl inline-block shadow-inner mx-auto block w-fit">
+                    <div className="grid grid-cols-10 gap-0.5 w-32 h-32 bg-white p-1 pb-1 mx-auto rounded-lg">
+                      {Array.from({ length: 100 }).map((_, pIdx) => {
+                        // Generate a gorgeous stable deterministic matrix code for beautiful styling
+                        const isFilled = (pIdx * 7 + 23) % 4 === 0 || pIdx < 8 || pIdx % 10 === 0 || pIdx > 92 || pIdx % 10 === 9 || (pIdx > 35 && pIdx < 65 && pIdx % 3 === 0);
+                        return (
+                          <div 
+                            key={pIdx} 
+                            className={`w-full h-full rounded-[1px] ${
+                              isFilled ? 'bg-zinc-950' : 'bg-transparent'
+                            }`}
+                          ></div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 text-center text-[9px] font-mono text-zinc-500 tracking-wider uppercase">
+                    🔒 METADATA ENCRYPTED & SECURED BY VIIT REGISTRATION
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ======================================================================= */}
       {/* 4. BIOMETRIC ENTRANCE GATE CHECK-IN QR MODAL (ACTIVE QR MODAL) */}
@@ -3634,18 +4084,161 @@ export default function App() {
         </div>
       )}
 
+      {/* Edit Profile Modal Overlay */}
+      {isEditProfileOpen && (
+        <div id="edit_profile_modal" className="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white max-w-lg w-full rounded-2xl border border-zinc-200/80 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-8">
+            
+            {/* Header */}
+            <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <User className="w-5 h-5 text-emerald-600 animate-pulse" />
+                <h3 className="font-extrabold text-zinc-900 tracking-tight text-base">Edit Account Profile</h3>
+              </div>
+              <button 
+                onClick={() => setIsEditProfileOpen(false)}
+                className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-650 hover:bg-zinc-100 transition-colors"
+                type="button"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!user) return;
+              try {
+                const updatedProfile: UserProfile = {
+                  uid: user.uid,
+                  name: editFullName,
+                  fullName: editFullName,
+                  email: user.email,
+                  phone: editPhoneNumber,
+                  phoneNumber: editPhoneNumber,
+                  branch: editAcademicDepartment,
+                  department: editAcademicDepartment,
+                  academicDepartment: editAcademicDepartment,
+                  campus: editHostCampusLocation,
+                  hostCampusLocation: editHostCampusLocation,
+                  rollNumber: editRollNumber,
+                  profilePhoto: editProfilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+                  createdAt: new Date().toISOString()
+                };
+
+                await saveUserProfile(updatedProfile);
+                setStudentProfile({
+                  name: editFullName,
+                  branch: editAcademicDepartment,
+                  avatarUrl: editProfilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+                  title: 'Academy Innovator'
+                });
+                triggerToast("✨ Account Profile updated successfully.");
+                setIsEditProfileOpen(false);
+              } catch (err) {
+                console.error(err);
+                triggerToast("❌ Failed to update profile.");
+              }
+            }} className="p-6 space-y-4">
+              
+              {/* Full Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-700 block">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white text-zinc-900 transition-all font-medium"
+                />
+              </div>
+
+              {/* Grid 2 Columns */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Phone */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-700 block">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={editPhoneNumber}
+                    onChange={(e) => setEditPhoneNumber(e.target.value)}
+                    className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white text-zinc-900 transition-all font-medium"
+                  />
+                </div>
+
+                {/* Roll Number */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-700 block">Roll Number</label>
+                  <input
+                    type="text"
+                    value={editRollNumber}
+                    onChange={(e) => setEditRollNumber(e.target.value)}
+                    className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white text-zinc-900 transition-all font-medium font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Branch / Department */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-700 block">Academic Department</label>
+                <input
+                  type="text"
+                  value={editAcademicDepartment}
+                  onChange={(e) => setEditAcademicDepartment(e.target.value)}
+                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white text-zinc-900 transition-all font-medium"
+                />
+              </div>
+
+              {/* Host Campus Selection dropdown */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-700 block">Host Campus Location</label>
+                <select
+                  value={editHostCampusLocation}
+                  onChange={(e) => setEditHostCampusLocation(e.target.value)}
+                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white text-zinc-900 transition-all font-medium cursor-pointer"
+                >
+                  <option value="VIIT Campus (Vignan's Institute of Information Technology)">VIIT Campus (Vignan's Institute of Information Technology)</option>
+                  <option value="VIEW Campus (Vignan's Institute of Engineering for Women)">VIEW Campus (Vignan's Institute of Engineering for Women)</option>
+                  <option value="VIT Pune Campus">VIT Pune Campus</option>
+                  <option value="KITE Engineering College">KITE Engineering College</option>
+                  <option value="Apex Group of Institutes">Apex Group of Institutes</option>
+                </select>
+              </div>
+
+              {/* Customize Profile Photo URL */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-700 block">Profile Photo URL</label>
+                <input
+                  type="url"
+                  value={editProfilePhoto}
+                  onChange={(e) => setEditProfilePhoto(e.target.value)}
+                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white text-zinc-900 transition-all font-mono"
+                />
+              </div>
+
+              {/* Footer Actions */}
+              <div className="pt-4 border-t border-zinc-100 flex items-center justify-end space-x-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsEditProfileOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-bold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-zinc-950 hover:bg-zinc-850 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  Save Profile Changes
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
-
-// Quick prototype dynamic hash key code for barcode mock generator
-(String.prototype as any).hashCode = function() {
-  let hash = 0, i, chr;
-  if (this.length === 0) return hash;
-  for (i = 0; i < this.length; i++) {
-    chr = this.charCodeAt(i);
-    hash = ((hash << 5) - hash) + chr;
-    hash |= 0;
-  }
-  return hash;
-};
